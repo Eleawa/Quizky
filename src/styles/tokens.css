@@ -1,0 +1,36 @@
+:root {
+	--color-brand: #2857ec;
+	--color-energy: #ff6b35;
+	--color-sunshine: #ffd23f;
+	--color-success: #29c785;
+	--color-ink: #20212a;
+	--color-surface: #ffffff;
+
+	--color-muted: #5b5d6b;
+	--color-border: #e3e5ee;
+	--color-tint: #f4f6ff;
+	--color-danger: #b42318;
+	--color-danger-tint: #fff1f0;
+
+	--font-sans: ui-rounded, 'SF Pro Rounded', 'Segoe UI', system-ui, -apple-system, sans-serif;
+	--font-display: ui-rounded, 'SF Pro Rounded', 'Segoe UI', system-ui, -apple-system, sans-serif;
+
+	--radius-sm: 0.5rem;
+	--radius-md: 1rem;
+	--radius-lg: 1.5rem;
+	--radius-pill: 999px;
+
+	--space-1: 0.25rem;
+	--space-2: 0.5rem;
+	--space-3: 0.75rem;
+	--space-4: 1rem;
+	--space-5: 1.5rem;
+	--space-6: 2rem;
+	--space-7: 3rem;
+	--space-8: 4rem;
+
+	--shadow-card: 0 1.5rem 4rem rgb(32 33 42 / 10%);
+	--shadow-button: 0 0.5rem 1.5rem rgb(40 87 236 / 30%);
+
+	--page-max: 72rem;
+}

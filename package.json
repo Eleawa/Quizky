@@ -1,0 +1,66 @@
+{
+	"name": "quizky",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"packageManager": "pnpm@12.16.1",
+	"engines": {
+		"node": ">=22.17"
+	},
+	"scripts": {
+		"dev": "vite dev --host 0.0.0.0",
+		"dev:room": "wrangler dev -c workers/session-room/wrangler.jsonc --port 8788 --persist-to .wrangler/state",
+		"dev:all": "concurrently -n web,room -c blue,orange \"pnpm run dev\" \"pnpm run dev:room\"",
+		"build": "pnpm run gen && vite build",
+		"preview": "wrangler dev .svelte-kit/cloudflare/_worker.js --port 4173",
+		"prepare": "svelte-kit sync && pnpm run gen",
+		"check": "pnpm run gen && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && pnpm run check:room",
+		"check:room": "tsc --noEmit -p workers/session-room/tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"lint": "prettier --check . && eslint .",
+		"format": "prettier --write .",
+		"test": "vitest run",
+		"test:unit": "vitest",
+		"gen": "pnpm run gen:web && pnpm run gen:room",
+		"gen:clean": "node scripts/clean-adapter-output.mjs",
+		"gen:web": "pnpm run gen:clean && wrangler types",
+		"gen:room": "wrangler types -c workers/session-room/wrangler.jsonc workers/session-room/worker-configuration.d.ts",
+		"db:create": "wrangler d1 create quizky-db",
+		"db:migrate:local": "wrangler d1 migrations apply DB --local",
+		"db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+		"deploy:room": "pnpm run check:room && wrangler deploy -c workers/session-room/wrangler.jsonc",
+		"deploy:web": "pnpm run build && wrangler deploy",
+		"deploy": "pnpm run deploy:room && pnpm run deploy:web"
+	},
+	"devDependencies": {
+		"@eslint/js": "^10.0.1",
+		"@sveltejs/adapter-cloudflare": "^8.0.0",
+		"@sveltejs/kit": "^3.0.0",
+		"@sveltejs/vite-plugin-svelte": "^7.2.0",
+		"@types/node": "^24",
+		"concurrently": "^10.0.6",
+		"drizzle-kit": "^0.31.11",
+		"eslint": "^10.4.1",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-svelte": "^3.19.0",
+		"globals": "^17.6.0",
+		"prettier": "^3.8.3",
+		"prettier-plugin-svelte": "^4.1.0",
+		"svelte": "^5.57.1",
+		"svelte-check": "^4.6.0",
+		"typescript": "^6.0.3",
+		"typescript-eslint": "^8.60.1",
+		"vite": "^8.3.0",
+		"vitest": "^4.1.8",
+		"wrangler": "^4.97.0"
+	},
+	"dependencies": {
+		"@noble/hashes": "^2.4.0",
+		"drizzle-orm": "^0.45.4",
+		"zod": "^4.6.7"
+	},
+	"imports": {
+		"#lib": "./src/lib/index.js",
+		"#lib/*": "./src/lib/*"
+	}
+}
