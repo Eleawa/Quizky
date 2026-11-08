@@ -1,9 +1,34 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
+		<link
+			rel="preload"
+			href="/fonts/DelaGothicOne-Regular.ttf"
+			as="font"
+			type="font/ttf"
+			crossorigin="anonymous"
+		/>
+		<script>
+			(function () {
+				try {
+					var theme = localStorage.getItem('quizky_theme');
+					if (!theme || theme === 'system') {
+						var prefersLight =
+							window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+						theme = prefersLight ? 'gruvbox-light' : 'gruvbox';
+					}
+					document.documentElement.setAttribute('data-theme', theme);
+					var isLight =
+						/-light$|-latte$|-dawn$|-lotus$|^light-owl$|^one-light$|^papercolor$|deep-light-material/.test(
+							theme
+						);
+					document.documentElement.setAttribute('data-bs-theme', isLight ? 'light' : 'dark');
+				} catch (e) {}
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

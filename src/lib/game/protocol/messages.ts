@@ -46,6 +46,13 @@ export const clientMessageSchema = z.discriminatedUnion('type', [
 	z
 		.object({
 			version: z.literal(PROTOCOL_VERSION).optional(),
+			type: z.literal('teacher_skip_question'),
+			requestId: requestIdSchema
+		})
+		.strict(),
+	z
+		.object({
+			version: z.literal(PROTOCOL_VERSION).optional(),
 			type: z.literal('teacher_end_game'),
 			requestId: requestIdSchema
 		})

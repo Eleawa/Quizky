@@ -1,23 +1,99 @@
+@font-face {
+	font-family: 'Dela Gothic One';
+	src: url('/fonts/DelaGothicOne-Regular.ttf') format('truetype');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
 :root {
-	--color-brand: #2857ec;
-	--color-energy: #ff6b35;
-	--color-sunshine: #ffd23f;
-	--color-success: #29c785;
-	--color-ink: #20212a;
-	--color-surface: #ffffff;
+	/* Authentic Gruvbox Dark Palette */
+	--gruv-bg-hard: #1d2021;
+	--gruv-bg0: #282828;
+	--gruv-bg-soft: #32302f;
+	--gruv-bg1: #3c3836;
+	--gruv-bg2: #504945;
+	--gruv-bg3: #665c54;
+	--gruv-bg4: #7c6f64;
 
-	--color-muted: #5b5d6b;
-	--color-border: #e3e5ee;
-	--color-tint: #f4f6ff;
-	--color-danger: #b42318;
-	--color-danger-tint: #fff1f0;
+	--gruv-fg0: #fbf1c7;
+	--gruv-fg1: #ebdbb2;
+	--gruv-fg2: #d5c4a1;
+	--gruv-fg3: #bdae93;
+	--gruv-fg4: #a89984;
+	--gruv-gray: #928374;
 
-	--font-sans: ui-rounded, 'SF Pro Rounded', 'Segoe UI', system-ui, -apple-system, sans-serif;
-	--font-display: ui-rounded, 'SF Pro Rounded', 'Segoe UI', system-ui, -apple-system, sans-serif;
+	--gruv-red: #fb4934;
+	--gruv-red-dim: #cc241d;
+	--gruv-green: #b8bb26;
+	--gruv-green-dim: #98971a;
+	--gruv-yellow: #fabd2f;
+	--gruv-yellow-dim: #d79921;
+	--gruv-blue: #83a598;
+	--gruv-blue-dim: #458588;
+	--gruv-purple: #d3869b;
+	--gruv-purple-dim: #b16286;
+	--gruv-aqua: #8ec07c;
+	--gruv-aqua-dim: #689d6a;
+	--gruv-orange: #fe8019;
+	--gruv-orange-dim: #d65d0e;
 
-	--radius-sm: 0.5rem;
-	--radius-md: 1rem;
-	--radius-lg: 1.5rem;
+	/* Semantic Application Tokens mapped to Gruvbox */
+	--color-brand: #fe8019;
+	--color-brand-dark: #d65d0e;
+	--color-energy: #fabd2f;
+	--color-sunshine: #fabd2f;
+	--color-success: #b8bb26;
+	--color-ink: #ebdbb2;
+	--color-heading: #fbf1c7;
+	--color-surface: #282828;
+
+	--color-canvas: #1d2021;
+	--color-muted: #bdae93;
+	--color-border: #504945;
+	--color-tint: #32302f;
+	--color-elevated: #3c3836;
+	--color-danger: #fb4934;
+	--color-danger-tint: #3c1f1e;
+
+	/* Bootstrap Theme Overrides */
+	--bs-body-bg: var(--color-canvas);
+	--bs-body-color: var(--color-ink);
+	--bs-body-font-family: var(--font-sans);
+	--bs-border-color: var(--color-border);
+	--bs-primary: #fe8019;
+	--bs-primary-rgb: 254, 128, 25;
+	--bs-secondary: #504945;
+	--bs-success: #b8bb26;
+	--bs-warning: #fabd2f;
+	--bs-danger: #fb4934;
+	--bs-info: #83a598;
+	--bs-dark: #1d2021;
+	--bs-light: #ebdbb2;
+	--bs-card-bg: var(--color-surface);
+	--bs-card-border-color: var(--color-border);
+	--bs-dropdown-bg: var(--color-surface);
+	--bs-dropdown-color: var(--color-ink);
+	--bs-dropdown-border-color: var(--color-border);
+	--bs-dropdown-link-color: var(--color-ink);
+	--bs-dropdown-link-hover-color: var(--color-heading);
+	--bs-dropdown-link-hover-bg: var(--color-elevated);
+	--bs-dropdown-link-active-color: var(--color-heading);
+	--bs-dropdown-link-active-bg: var(--color-tint);
+	--bs-dropdown-divider-bg: var(--color-border);
+
+	/* Typography: Dela Gothic One as primary site typeface */
+	--font-sans:
+		'Dela Gothic One', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	--font-display:
+		'Dela Gothic One', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	--font-mono:
+		ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+		monospace;
+
+	--radius-sm: 0.45rem;
+	--radius-md: 0.65rem;
+	--radius-lg: 0.9rem;
 	--radius-pill: 999px;
 
 	--space-1: 0.25rem;
@@ -29,8 +105,8 @@
 	--space-7: 3rem;
 	--space-8: 4rem;
 
-	--shadow-card: 0 1.5rem 4rem rgb(32 33 42 / 10%);
-	--shadow-button: 0 0.5rem 1.5rem rgb(40 87 236 / 30%);
+	--shadow-card: 0 4px 0 #141617;
+	--shadow-button: 0 3px 0 #141617;
 
-	--page-max: 72rem;
+	--page-max: 74rem;
 }

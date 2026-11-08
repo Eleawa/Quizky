@@ -1,15 +1,18 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import EnergyIcon from '#lib/components/EnergyIcon.svelte';
+	import QuestionText from '#lib/components/QuestionText.svelte';
 	import SiteHeader from '#lib/components/SiteHeader.svelte';
+	import { gsapStagger } from '#lib/shared/animations.js';
 	import { BRAND } from '#lib/shared/brand.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	function formatDate(iso: string | null): string {
-		if (!iso) return '—';
+		if (!iso) return '-';
 		const parsed = new Date(iso);
-		if (Number.isNaN(parsed.getTime())) return '—';
+		if (Number.isNaN(parsed.getTime())) return '-';
 		return parsed.toLocaleString(undefined, {
 			year: 'numeric',
 			month: 'short',
@@ -21,7 +24,7 @@
 </script>
 
 <svelte:head>
-	<title>Results · {data.results.quizTitle} ({data.results.joinCode}) — {BRAND.name}</title>
+	<title>Results · {data.results.quizTitle} ({data.results.joinCode}) · {BRAND.name}</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
@@ -31,14 +34,16 @@
 	<main class="results-main">
 		<div class="results-topbar">
 			<div class="results-nav">
-				<a class="nav-link" href={resolve('/(teacher)/dashboard')}>← Back to dashboard</a>
+				<a class="nav-link" href={resolve('/(teacher)/dashboard')}
+					><EnergyIcon name="arrow-left" /> Back to dashboard</a
+				>
 				<a
 					class="nav-link"
 					href={resolve('/(teacher)/sessions/[sessionId]', {
 						sessionId: data.results.sessionId
 					})}
 				>
-					Live session room →
+					Live session room <EnergyIcon name="arrow-right" />
 				</a>
 			</div>
 			<span class="status-pill" data-status={data.results.status}>
@@ -107,7 +112,7 @@
 		<section class="questions-breakdown" aria-labelledby="breakdown-heading">
 			<h2 id="breakdown-heading">Question-by-Question Breakdown</h2>
 
-			<div class="question-cards">
+			<div class="question-cards" use:gsapStagger={{ selector: '.question-report-card' }}>
 				{#each data.results.questions as question (question.questionId)}
 					<article class="panel question-report-card">
 						<div class="question-report-header">
@@ -123,7 +128,7 @@
 							</span>
 						</div>
 
-						<h3>{question.text}</h3>
+						<QuestionText headingTag="h3" text={question.text} />
 
 						<ul class="option-stats-list">
 							{#each question.optionStats as stat, idx (stat.optionId)}
@@ -132,7 +137,9 @@
 									<span class="option-text">
 										{stat.text}
 										{#if stat.isCorrect}
-											<strong class="correct-label">✓ Correct answer</strong>
+											<strong class="correct-label"
+												><EnergyIcon name="check" /> Correct answer</strong
+											>
 										{/if}
 									</span>
 									<span class="count-pill">{stat.count} chosen</span>
@@ -165,16 +172,20 @@
 														{#if pAns.selectedOptionId === null}
 															<span class="outcome-tag" data-outcome="missed">No answer</span>
 														{:else if pAns.isCorrect}
-															<span class="outcome-tag" data-outcome="correct">✓ Correct</span>
+															<span class="outcome-tag" data-outcome="correct"
+																><EnergyIcon name="check" /> Correct</span
+															>
 														{:else}
-															<span class="outcome-tag" data-outcome="wrong">✗ Incorrect</span>
+															<span class="outcome-tag" data-outcome="wrong"
+																><EnergyIcon name="close" /> Incorrect</span
+															>
 														{/if}
 													</td>
 													<td>{pAns.scoreAwarded} pts</td>
 													<td>
 														{pAns.responseTimeMs !== null
 															? `${(pAns.responseTimeMs / 1000).toFixed(2)}s`
-															: '—'}
+															: '-'}
 													</td>
 												</tr>
 											{/each}
@@ -197,8 +208,9 @@
 <style>
 	.results-main {
 		display: grid;
+		align-content: start;
 		gap: var(--space-5);
-		padding-block: var(--space-5) var(--space-7);
+		padding-block: var(--space-6);
 	}
 
 	.results-topbar {
@@ -256,9 +268,10 @@
 	}
 
 	.stat-value {
-		font-family: var(--font-display);
-		font-size: 1.8rem;
-		font-weight: 900;
+		font-family: var(--font-mono);
+		font-size: 1.65rem;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.leaderboard-section,
@@ -299,8 +312,8 @@
 	}
 
 	.question-badge {
-		background: var(--color-brand);
-		color: #ffffff;
+		background: var(--gruv-orange);
+		color: var(--gruv-bg-hard);
 	}
 
 	.points-badge,
@@ -321,15 +334,15 @@
 		display: flex;
 		align-items: center;
 		gap: var(--space-3);
-		border: 1px solid var(--color-border);
+		border: 2px solid var(--color-border);
 		border-radius: var(--radius-md);
-		background: var(--color-surface);
+		background: var(--gruv-bg1);
 		padding: var(--space-3) var(--space-4);
 	}
 
 	.option-stat-row[data-correct='true'] {
-		border-color: #1d9a65;
-		background: #f0fdf7;
+		border-color: var(--gruv-green);
+		background: #2b331b;
 	}
 
 	.option-letter {
@@ -338,35 +351,36 @@
 		width: 1.9rem;
 		height: 1.9rem;
 		border-radius: 50%;
-		background: var(--color-tint);
-		color: var(--color-brand);
-		font-weight: 900;
+		background: var(--gruv-bg-hard);
+		color: var(--gruv-yellow);
+		font-weight: 400;
 		flex-shrink: 0;
 	}
 
 	.option-text {
 		flex: 1;
-		font-weight: 700;
+		font-weight: 400;
 	}
 
 	.correct-label {
 		margin-left: var(--space-2);
-		color: #0e5a3a;
+		color: var(--gruv-green);
 		font-size: 0.85rem;
 	}
 
 	.count-pill {
 		border-radius: var(--radius-pill);
-		background: var(--color-tint);
+		background: var(--gruv-bg-hard);
 		padding: 0.2rem 0.65rem;
 		font-size: 0.82rem;
-		font-weight: 800;
+		font-weight: 400;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.player-answers-details summary {
 		cursor: pointer;
-		font-weight: 800;
-		color: var(--color-brand);
+		font-weight: 400;
+		color: var(--gruv-yellow);
 	}
 
 	.table-wrap {
@@ -377,6 +391,7 @@
 		width: 100%;
 		border-collapse: collapse;
 		text-align: left;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.results-table th,
@@ -388,7 +403,7 @@
 	.results-table th {
 		color: var(--color-muted);
 		font-size: 0.78rem;
-		font-weight: 800;
+		font-weight: 400;
 		letter-spacing: 0.05em;
 		text-transform: uppercase;
 	}
@@ -396,19 +411,20 @@
 	.bold-cell,
 	.score-cell,
 	.time-cell {
-		font-weight: 800;
+		font-weight: 400;
+		color: var(--color-heading);
 	}
 
 	.outcome-tag {
-		font-weight: 800;
+		font-weight: 400;
 	}
 
 	.outcome-tag[data-outcome='correct'] {
-		color: #0e5a3a;
+		color: var(--gruv-green);
 	}
 
 	.outcome-tag[data-outcome='wrong'] {
-		color: #991b1b;
+		color: var(--gruv-red);
 	}
 
 	.outcome-tag[data-outcome='missed'] {

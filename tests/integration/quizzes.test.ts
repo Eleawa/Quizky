@@ -39,7 +39,7 @@ function migrationStatements(): string[] {
 	const directory = join(process.cwd(), 'migrations');
 	return readdirSync(directory)
 		.filter((file) => file.endsWith('.sql'))
-		.sort()
+		.toSorted()
 		.flatMap((file) =>
 			readFileSync(join(directory, file), 'utf8')
 				.split('--> statement-breakpoint')

@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import EnergyIcon from '#lib/components/EnergyIcon.svelte';
 	import SiteHeader from '#lib/components/SiteHeader.svelte';
+	import { gsapReveal, gsapStagger } from '#lib/shared/animations.js';
 	import { BRAND } from '#lib/shared/brand.js';
 	import { JOIN_CODE_LENGTH } from '#lib/shared/session.js';
 	import type { PageProps } from './$types';
@@ -10,21 +12,28 @@
 
 	let joinCode = $state('');
 	let codeError = $state('');
+	let joining = $state(false);
 
 	async function handleJoinCodeSubmit(event: SubmitEvent) {
 		event.preventDefault();
+		if (joining) return;
 		const clean = joinCode.trim().toUpperCase();
 		if (clean.length !== JOIN_CODE_LENGTH) {
 			codeError = 'Enter a 6-character join code.';
 			return;
 		}
 		codeError = '';
-		await goto(resolve('/join/[code]', { code: clean }));
+		joining = true;
+		try {
+			await goto(resolve('/join/[code]', { code: clean }));
+		} finally {
+			joining = false;
+		}
 	}
 </script>
 
 <svelte:head>
-	<title>{BRAND.name} — {BRAND.tagline}</title>
+	<title>{BRAND.name} · {BRAND.tagline}</title>
 	<meta
 		name="description"
 		content="Quizky is a live, teacher-led quiz platform. Students join with a code and nickname, no account required."
@@ -35,68 +44,95 @@
 	<SiteHeader teacher={data.teacher} />
 
 	<main>
-		<section class="hero" aria-labelledby="hero-title">
-			<p class="eyebrow">Live, teacher-led quizzes</p>
-			<h1 id="hero-title">
-				<span class="play">Play.</span>
-				<span class="think">Think.</span>
-				<span class="win">Win.</span>
-			</h1>
-			<p class="lede">
-				Quizky turns your questions into a fast, friendly game show. Teachers host from any screen;
-				students join with a code and a nickname.
-			</p>
+		<section class="hero row g-4 align-items-center" aria-labelledby="hero-title">
+			<div class="hero-copy col-12 col-lg-7" use:gsapReveal={{ y: 20 }}>
+				<p class="eyebrow">Live, teacher-led quizzes</p>
+				<h1 id="hero-title">
+					<span class="play">Play.</span>
+					<span class="think">Think.</span>
+					<span class="win">Win.</span>
+				</h1>
+				<p class="lede">
+					Quizky turns your questions into a fast, friendly game show. Teachers host from any
+					screen; students join with a code and a nickname.
+				</p>
 
-			<form class="join-box" onsubmit={handleJoinCodeSubmit} novalidate>
-				<label class="join-box-label" for="home-join-code">Have a game code?</label>
-				<div class="join-box-row">
-					<input
-						id="home-join-code"
-						type="text"
-						class="join-box-input"
-						maxlength={JOIN_CODE_LENGTH}
-						placeholder="6-CHAR CODE"
-						autocapitalize="characters"
-						autocomplete="off"
-						spellcheck="false"
-						bind:value={joinCode}
-						aria-invalid={codeError ? 'true' : undefined}
-					/>
-					<button class="button button-primary" type="submit">Join game</button>
+				<div class="cta-row">
+					{#if data.teacher}
+						<a class="button button-primary" href={resolve('/(teacher)/dashboard')}
+							>Open your dashboard</a
+						>
+					{:else}
+						<a class="button button-primary" href={resolve('/register')}>Create a teacher account</a
+						>
+						<a class="button button-secondary" href={resolve('/login')}>Sign in</a>
+					{/if}
 				</div>
-				{#if codeError}
-					<p class="field-error" role="alert">{codeError}</p>
-				{/if}
-			</form>
+			</div>
 
-			<div class="cta-row">
-				{#if data.teacher}
-					<a class="button button-primary" href={resolve('/(teacher)/dashboard')}
-						>Open your dashboard</a
-					>
-				{:else}
-					<a class="button button-primary" href={resolve('/register')}>Create a teacher account</a>
-					<a class="button button-secondary" href={resolve('/login')}>Sign in</a>
-				{/if}
+			<div class="col-12 col-lg-5" use:gsapReveal={{ y: 20, delay: 0.08 }}>
+				<form class="join-box" onsubmit={handleJoinCodeSubmit} novalidate>
+					<label class="join-box-label" for="home-join-code">Have a game code?</label>
+					<p class="join-box-hint">Enter the 6-character code shown on your teacher's screen.</p>
+					<div class="join-box-row">
+						<input
+							id="home-join-code"
+							type="text"
+							class="join-box-input"
+							maxlength={JOIN_CODE_LENGTH}
+							placeholder="6-CHAR CODE"
+							autocapitalize="characters"
+							autocomplete="off"
+							spellcheck="false"
+							bind:value={joinCode}
+							aria-invalid={codeError ? 'true' : undefined}
+						/>
+						<button class="button button-primary" type="submit" disabled={joining}>
+							{#if joining}
+								<span class="gruv-spinner" aria-hidden="true"></span>
+							{/if}
+							Join game
+						</button>
+					</div>
+					{#if codeError}
+						<p class="field-error" role="alert">{codeError}</p>
+					{/if}
+				</form>
 			</div>
 		</section>
 
-		<section class="features" aria-label="What Quizky will do">
-			<article class="feature">
-				<span class="feature-dot dot-blue" aria-hidden="true"></span>
-				<h2>Host a live game</h2>
-				<p>Create a quiz, open a lobby, and share a short join code with your class.</p>
-			</article>
-			<article class="feature">
-				<span class="feature-dot dot-orange" aria-hidden="true"></span>
-				<h2>Join in seconds</h2>
-				<p>Students enter a nickname and answer on any phone, tablet, or laptop.</p>
-			</article>
-			<article class="feature">
-				<span class="feature-dot dot-green" aria-hidden="true"></span>
-				<h2>See who got it</h2>
-				<p>The server keeps score and timing fair, with results saved for the teacher.</p>
-			</article>
+		<section
+			class="features row g-3"
+			aria-label="What Quizky will do"
+			use:gsapStagger={{ selector: '.feature', delay: 0.14 }}
+		>
+			<div class="col-12 col-md-4 d-flex">
+				<article class="feature w-100">
+					<span class="feature-icon-badge" aria-hidden="true">
+						<EnergyIcon name="bolt" size="1.4em" />
+					</span>
+					<h2>Host a live game</h2>
+					<p>Create a quiz, open a lobby, and share a short join code with your class.</p>
+				</article>
+			</div>
+			<div class="col-12 col-md-4 d-flex">
+				<article class="feature w-100">
+					<span class="feature-icon-badge badge-yellow" aria-hidden="true">
+						<EnergyIcon name="timer" size="1.4em" />
+					</span>
+					<h2>Join in seconds</h2>
+					<p>Students enter a nickname and answer on any phone, tablet, or laptop.</p>
+				</article>
+			</div>
+			<div class="col-12 col-md-4 d-flex">
+				<article class="feature w-100">
+					<span class="feature-icon-badge badge-green" aria-hidden="true">
+						<EnergyIcon name="trophy" size="1.4em" />
+					</span>
+					<h2>See who got it</h2>
+					<p>The server keeps score and timing fair, with results saved for the teacher.</p>
+				</article>
+			</div>
 		</section>
 	</main>
 
@@ -109,72 +145,77 @@
 	main {
 		display: grid;
 		align-content: center;
-		gap: var(--space-7);
-		padding-block: var(--space-7);
+		gap: var(--space-6);
+		padding-block: var(--space-6);
 	}
 
-	.hero {
-		max-width: 44rem;
+	.hero-copy {
+		display: grid;
+		gap: var(--space-3);
 	}
 
 	.eyebrow {
-		margin-bottom: var(--space-3);
-		color: var(--color-brand);
-		font-size: 0.85rem;
-		font-weight: 800;
-		letter-spacing: 0.12em;
+		color: var(--gruv-orange);
+		font-size: 0.78rem;
+		font-weight: 400;
+		letter-spacing: 0.08em;
 		text-transform: uppercase;
 	}
 
 	h1 {
 		display: flex;
 		flex-wrap: wrap;
-		gap: var(--space-2) var(--space-4);
-		font-size: clamp(3rem, 10vw, 6.5rem);
-		font-weight: 900;
+		gap: var(--space-2) var(--space-3);
+		font-size: clamp(2.1rem, 5.2vw, 3.6rem);
+		font-weight: 400;
+		line-height: 1.15;
 	}
 
 	.play {
-		color: var(--color-brand);
+		color: var(--gruv-orange);
 	}
 
 	.think {
-		color: var(--color-energy);
+		color: var(--gruv-yellow);
 	}
 
 	.win {
-		color: var(--color-success);
+		color: var(--gruv-green);
 	}
 
 	.lede {
-		max-width: 36rem;
-		margin-top: var(--space-5);
+		max-width: 34rem;
 		color: var(--color-muted);
-		font-size: clamp(1.05rem, 2vw, 1.25rem);
+		font-size: clamp(0.95rem, 1.4vw, 1.08rem);
 	}
 
 	.cta-row {
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--space-3);
-		margin-top: var(--space-5);
+		margin-top: var(--space-2);
 	}
 
 	.join-box {
 		display: grid;
-		gap: var(--space-2);
-		max-width: 28rem;
-		margin-top: var(--space-5);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
+		gap: var(--space-3);
+		width: 100%;
+		border: 2px solid var(--gruv-orange);
+		border-radius: var(--radius-lg);
 		background: var(--color-surface);
-		padding: var(--space-4);
+		padding: var(--space-5);
 		box-shadow: var(--shadow-card);
 	}
 
 	.join-box-label {
-		font-size: 0.88rem;
-		font-weight: 800;
+		color: var(--color-heading);
+		font-size: 1rem;
+		font-weight: 400;
+	}
+
+	.join-box-hint {
+		color: var(--color-muted);
+		font-size: 0.84rem;
 	}
 
 	.join-box-row {
@@ -185,65 +226,78 @@
 
 	.join-box-input {
 		flex: 1;
-		min-width: 10rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-pill);
-		background: #fbfcff;
-		padding: 0.65rem 1rem;
-		color: var(--color-ink);
-		font: inherit;
-		font-weight: 900;
+		min-width: 9rem;
+		border: 2px solid var(--color-border);
+		border-radius: var(--radius-sm);
+		background: var(--gruv-bg-hard);
+		padding: 0.65rem 0.9rem;
+		color: var(--gruv-yellow);
+		font-family: var(--font-mono);
+		font-size: 1.05rem;
+		font-weight: 700;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
+		font-variant-numeric: tabular-nums;
 	}
 
-	.features {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-		gap: var(--space-4);
+	.join-box-input::placeholder {
+		color: var(--gruv-gray);
+	}
+
+	.join-box-input:focus {
+		border-color: var(--gruv-orange);
+		outline: none;
 	}
 
 	.feature {
-		border: 1px solid var(--color-border);
+		border: 2px solid var(--color-border);
 		border-radius: var(--radius-md);
 		background: var(--color-surface);
 		padding: var(--space-5);
 		box-shadow: var(--shadow-card);
+		transition:
+			transform 150ms ease,
+			border-color 150ms ease;
+	}
+
+	.feature:hover {
+		transform: translateY(-2px);
+		border-color: var(--gruv-bg3);
 	}
 
 	.feature h2 {
 		margin-top: var(--space-3);
-		font-size: 1.15rem;
+		font-size: 1.05rem;
 	}
 
 	.feature p {
 		margin-top: var(--space-2);
 		color: var(--color-muted);
-		font-size: 0.92rem;
+		font-size: 0.88rem;
 	}
 
-	.feature-dot {
-		display: block;
-		width: 0.8rem;
-		height: 0.8rem;
-		border-radius: 50%;
+	.feature-icon-badge {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.4rem;
+		height: 2.4rem;
+		border: 2px solid var(--gruv-orange);
+		border-radius: var(--radius-sm);
+		background: rgba(254, 128, 25, 0.12);
+		color: var(--gruv-orange);
+		box-shadow: 0 2px 0 #141617;
 	}
 
-	.dot-blue {
-		background: var(--color-brand);
+	.feature-icon-badge.badge-yellow {
+		border-color: var(--gruv-yellow);
+		background: rgba(250, 189, 47, 0.12);
+		color: var(--gruv-yellow);
 	}
 
-	.dot-orange {
-		background: var(--color-energy);
-	}
-
-	.dot-green {
-		background: var(--color-success);
-	}
-
-	@media (max-width: 40rem) {
-		h1 {
-			font-size: clamp(2.6rem, 16vw, 4rem);
-		}
+	.feature-icon-badge.badge-green {
+		border-color: var(--gruv-green);
+		background: rgba(184, 187, 38, 0.12);
+		color: var(--gruv-green);
 	}
 </style>

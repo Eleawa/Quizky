@@ -11,6 +11,7 @@ import {
 	evaluateAnswerSubmission,
 	transitionAdvanceOrTimeout,
 	transitionEndGame,
+	transitionSkipQuestion,
 	transitionStartGame,
 	type EngineRoomState
 } from '../../src/lib/game/engine/state-machine.js';
@@ -362,5 +363,42 @@ describe('game state machine transitions, deadlines, and answer validation', () 
 		});
 		if (!endedEarly.ok) return;
 		expect(endedEarly.closedActiveQuestion?.id).toBe('q-1');
+	});
+
+	it('allows teachers to skip questions immediately to the next question or complete on the last question', () => {
+		const t0 = Date.parse('2026-10-30T12:00:00.000Z');
+		const started = transitionStartGame(createLobbyState(), sampleQuestions, t0);
+		if (!started.ok) throw new Error('Expected start');
+
+		// Skip Question 1 (index 0) -> immediately opens Question 2 (index 1)
+		const skippedQ1 = transitionSkipQuestion(started.nextState, sampleQuestions, t0 + 4000);
+		expect(skippedQ1).toMatchObject({
+			ok: true,
+			action: 'question_skipped',
+			completedGame: false,
+			alarmAtMs: t0 + 4000 + 15_000
+		});
+		if (!skippedQ1.ok || skippedQ1.action !== 'question_skipped') {
+			throw new Error('Expected question_skipped');
+		}
+		expect(skippedQ1.skippedQuestion.id).toBe('q-1');
+		expect(skippedQ1.openedQuestion.id).toBe('q-2');
+		expect(skippedQ1.nextState.currentQuestionIndex).toBe(1);
+		expect(skippedQ1.nextState.questionPhase).toBe('open');
+
+		// Skip Question 2 (last question) -> completes game
+		const skippedQ2 = transitionSkipQuestion(skippedQ1.nextState, sampleQuestions, t0 + 7000);
+		expect(skippedQ2).toMatchObject({
+			ok: true,
+			action: 'game_completed',
+			completedGame: true,
+			alarmAtMs: null
+		});
+		if (!skippedQ2.ok || skippedQ2.action !== 'game_completed') {
+			throw new Error('Expected game_completed');
+		}
+		expect(skippedQ2.skippedQuestion.id).toBe('q-2');
+		expect(skippedQ2.nextState.status).toBe('completed');
+		expect(skippedQ2.nextState.questionPhase).toBe('closed');
 	});
 });

@@ -6,7 +6,7 @@ export const QUIZ_LIMITS = {
 	maxDescriptionLength: 500,
 	minQuestionsToPublish: 1,
 	maxQuestions: 50,
-	maxQuestionTextLength: 300,
+	maxQuestionTextLength: 1000,
 	minOptions: 2,
 	maxOptions: 6,
 	maxOptionTextLength: 160,

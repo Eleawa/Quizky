@@ -1,0 +1,47 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "promise"],
+	"categories": {
+		"correctness": "error",
+		"suspicious": "error",
+		"perf": "error"
+	},
+	"ignorePatterns": [
+		"worker-configuration.d.ts",
+		"workers/**/worker-configuration.d.ts",
+		".svelte-kit/**",
+		".wrangler/**",
+		"node_modules/**"
+	],
+	"rules": {
+		"eqeqeq": "error",
+		"no-var": "error",
+		"prefer-const": "error",
+		"no-shadow": "error",
+		"no-debugger": "error",
+		"no-eval": "error",
+		"no-implied-eval": "error",
+		"no-self-compare": "error",
+		"no-template-curly-in-string": "error",
+		"no-unreachable-loop": "error",
+		"no-underscore-dangle": [
+			"error",
+			{
+				"allow": ["__sveltekit_cloudflare_platform"]
+			}
+		],
+		"no-await-in-loop": "off",
+		"typescript/no-explicit-any": "error",
+		"typescript/no-non-null-asserted-optional-chain": "error",
+		"typescript/prefer-as-const": "error",
+		"unicorn/no-array-sort": "error",
+		"unicorn/prefer-add-event-listener": "error",
+		"unicorn/require-module-specifiers": "off",
+		"import/no-unassigned-import": [
+			"error",
+			{
+				"allow": ["**/*.css"]
+			}
+		]
+	}
+}

@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import EnergyIcon from '#lib/components/EnergyIcon.svelte';
 	import QrCodeModal from '#lib/components/QrCodeModal.svelte';
 	import SiteHeader from '#lib/components/SiteHeader.svelte';
+	import { gsapStagger } from '#lib/shared/animations.js';
 	import { readApiError } from '#lib/shared/api-error.js';
 	import { BRAND } from '#lib/shared/brand.js';
 	import { QUIZ_LIMITS, type QuizStatus, type QuizSummary } from '#lib/shared/quiz.js';
@@ -200,7 +202,7 @@
 </script>
 
 <svelte:head>
-	<title>Dashboard — {BRAND.name}</title>
+	<title>Dashboard · {BRAND.name}</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
@@ -272,6 +274,11 @@
 
 				<div>
 					<button class="button button-primary" type="submit" disabled={creating}>
+						{#if creating}
+							<span class="gruv-spinner" aria-hidden="true"></span>
+						{:else}
+							<EnergyIcon name="plus" />
+						{/if}
 						{creating ? 'Creating…' : 'Create draft & add questions'}
 					</button>
 				</div>
@@ -297,7 +304,7 @@
 					<p>Create your first quiz above to start adding multiple-choice questions.</p>
 				</div>
 			{:else}
-				<ul class="quiz-list">
+				<ul class="quiz-list" use:gsapStagger={{ selector: '.quiz-card' }}>
 					{#each data.quizzes as quiz (quiz.id)}
 						<li class="panel quiz-card">
 							<div class="quiz-card-header">
@@ -323,6 +330,7 @@
 										onclick={() => handleStartSession(quiz, false)}
 										disabled={busyQuizId === quiz.id}
 									>
+										<EnergyIcon name="bolt" />
 										{busyQuizId === quiz.id ? 'Opening lobby…' : 'Host live session'}
 									</button>
 									<button
@@ -331,6 +339,7 @@
 										onclick={() => handleStartSession(quiz, true)}
 										disabled={busyQuizId === quiz.id}
 									>
+										<EnergyIcon name="qr-code" />
 										Share QR code
 									</button>
 								{/if}
@@ -341,6 +350,7 @@
 										: 'button-primary'}"
 									href={resolve('/(teacher)/quizzes/[quizId]', { quizId: quiz.id })}
 								>
+									<EnergyIcon name="pencil" />
 									{quiz.status === 'archived' ? 'View quiz' : 'Edit quiz'}
 								</a>
 
@@ -509,8 +519,9 @@
 <style>
 	.teacher-main {
 		display: grid;
+		align-content: start;
 		gap: var(--space-6);
-		padding-block: var(--space-5) var(--space-7);
+		padding-block: var(--space-6);
 	}
 
 	.teacher-hero {
@@ -529,8 +540,10 @@
 		display: grid;
 		gap: var(--space-4);
 		margin-top: var(--space-6);
-		border-top: 1px solid var(--color-border);
-		padding-top: var(--space-5);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+		background: var(--color-tint);
+		padding: var(--space-4);
 	}
 
 	.create-quiz-form h2 {
@@ -596,15 +609,15 @@
 	}
 
 	.status-draft {
-		border: 1px solid #d9b424;
-		background: #fff7d1;
-		color: var(--color-ink);
+		border: 1px solid var(--gruv-yellow);
+		background: #3b311a;
+		color: var(--gruv-yellow);
 	}
 
 	.status-published {
-		border: 1px solid #1d9a65;
-		background: #e3faef;
-		color: #0e5a3a;
+		border: 1px solid var(--gruv-green);
+		background: #2b331b;
+		color: var(--gruv-green);
 	}
 
 	.status-archived {
@@ -615,7 +628,7 @@
 
 	.meta-pill {
 		border: 1px solid var(--color-border);
-		background: var(--color-surface);
+		background: var(--gruv-bg1);
 		color: var(--color-muted);
 	}
 
@@ -637,23 +650,23 @@
 		background: var(--color-tint);
 		padding: var(--space-2) var(--space-3);
 		font-size: 0.88rem;
-		font-weight: 700;
+		font-weight: 400;
 	}
 
 	.button-danger {
 		border-color: var(--color-danger);
 		background: var(--color-danger);
-		color: var(--color-surface);
+		color: var(--gruv-bg-hard);
 	}
 
 	.status-notice {
-		border: 1px solid #1d9a65;
+		border: 2px solid var(--gruv-green);
 		border-radius: var(--radius-sm);
-		background: #e3faef;
+		background: #2b331b;
 		padding: var(--space-3);
-		color: #0e5a3a;
+		color: var(--gruv-fg0);
 		font-size: 0.9rem;
-		font-weight: 700;
+		font-weight: 400;
 	}
 
 	.empty-state {

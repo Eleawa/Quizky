@@ -1,4 +1,6 @@
 <script lang="ts">
+	import EnergyIcon from '#lib/components/EnergyIcon.svelte';
+	import { gsapPop } from '#lib/shared/animations.js';
 	import { renderQrCodeSvgData } from '#lib/shared/qrcode.js';
 
 	interface Props {
@@ -49,7 +51,7 @@
 		const svgBlob = new Blob([qrData.svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
 		const url = URL.createObjectURL(svgBlob);
 
-		img.onload = () => {
+		img.addEventListener('load', () => {
 			const canvas = document.createElement('canvas');
 			canvas.width = sizePx;
 			canvas.height = sizePx;
@@ -66,7 +68,7 @@
 				link.remove();
 			}
 			URL.revokeObjectURL(url);
-		};
+		});
 		img.src = url;
 	}
 
@@ -92,6 +94,7 @@
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="qr-modal-title"
+			use:gsapPop
 		>
 			<div class="qr-modal-header">
 				<div>
@@ -104,7 +107,7 @@
 					onclick={onClose}
 					aria-label="Close QR code modal"
 				>
-					✕ Close
+					<EnergyIcon name="close" /> Close
 				</button>
 			</div>
 
@@ -117,8 +120,8 @@
 						role="img"
 						aria-label="Join quiz QR code"
 					>
-						<rect width={qrData.viewBoxSize} height={qrData.viewBoxSize} fill="#ffffff" />
-						<path d={qrData.pathData} fill="#111827" />
+						<rect width={qrData.viewBoxSize} height={qrData.viewBoxSize} fill="#fbf1c7" />
+						<path d={qrData.pathData} fill="#1d2021" />
 					</svg>
 				</div>
 
@@ -131,7 +134,11 @@
 							type="button"
 							onclick={() => copyValue(joinCode, 'code')}
 						>
-							{copiedCode ? '✓ Copied' : 'Copy code'}
+							{#if copiedCode}
+								<EnergyIcon name="check" /> Copied
+							{:else}
+								<EnergyIcon name="copy" /> Copy code
+							{/if}
 						</button>
 					</div>
 
@@ -153,7 +160,11 @@
 					type="button"
 					onclick={() => copyValue(joinUrl, 'link')}
 				>
-					{copiedLink ? '✓ Copied join link' : 'Copy join link'}
+					{#if copiedLink}
+						<EnergyIcon name="check" /> Copied join link
+					{:else}
+						<EnergyIcon name="link" /> Copy join link
+					{/if}
 				</button>
 			</div>
 		</div>
@@ -168,8 +179,7 @@
 		display: grid;
 		place-items: center;
 		padding: var(--space-4);
-		background: rgba(15, 23, 42, 0.65);
-		backdrop-filter: blur(4px);
+		background: rgb(15 23 42 / 60%);
 	}
 
 	.qr-modal-dialog {
@@ -180,7 +190,6 @@
 		overflow-y: auto;
 		padding: var(--space-5);
 		text-align: center;
-		box-shadow: 0 24px 48px rgba(0, 0, 0, 0.22);
 	}
 
 	.qr-modal-header {
@@ -205,13 +214,12 @@
 	.qr-frame {
 		display: grid;
 		place-items: center;
-		width: min(20rem, 72vw);
+		width: min(19rem, 72vw);
 		aspect-ratio: 1 / 1;
-		border: 3px solid var(--color-brand);
+		border: 3px solid var(--gruv-orange);
 		border-radius: var(--radius-lg);
-		background: #ffffff;
+		background: #fbf1c7;
 		padding: var(--space-2);
-		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 	}
 
 	.qr-svg {
@@ -241,17 +249,18 @@
 
 	.qr-code-pill-label {
 		color: var(--color-brand);
-		font-size: 0.78rem;
-		font-weight: 800;
-		letter-spacing: 0.1em;
+		font-size: 0.76rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
 		text-transform: uppercase;
 	}
 
 	.qr-code-pill-value {
-		font-family: var(--font-display);
-		font-size: 1.65rem;
-		font-weight: 900;
+		font-family: var(--font-mono);
+		font-size: 1.55rem;
+		font-weight: 700;
 		letter-spacing: 0.12em;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.qr-url-display {

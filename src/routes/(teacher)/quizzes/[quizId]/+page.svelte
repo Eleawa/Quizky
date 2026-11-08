@@ -1,9 +1,16 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { beforeNavigate, goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import QuestionText from '#lib/components/QuestionText.svelte';
 	import SiteHeader from '#lib/components/SiteHeader.svelte';
+	import EnergyIcon from '#lib/components/EnergyIcon.svelte';
 	import { readApiError } from '#lib/shared/api-error.js';
 	import { BRAND } from '#lib/shared/brand.js';
+	import {
+		combineQuestionPromptAndCode,
+		splitQuestionPromptAndCode
+	} from '#lib/shared/code-highlight.js';
 	import {
 		QUIZ_LIMITS,
 		type QuizDetail,
@@ -23,6 +30,9 @@
 	interface EditableQuestion {
 		key: string;
 		text: string;
+		code: string;
+		codeLanguage: string;
+		editingCode: boolean;
 		imageUrl: string | null;
 		timeLimitSeconds: number;
 		points: number;
@@ -30,18 +40,24 @@
 	}
 
 	function toEditableQuestions(quiz: QuizDetail): EditableQuestion[] {
-		return quiz.questions.map((question) => ({
-			key: question.id,
-			text: question.text,
-			imageUrl: question.imageUrl ?? null,
-			timeLimitSeconds: question.timeLimitSeconds,
-			points: question.points,
-			options: question.options.map((option) => ({
-				key: option.id,
-				text: option.text,
-				isCorrect: option.isCorrect
-			}))
-		}));
+		return quiz.questions.map((question) => {
+			const split = splitQuestionPromptAndCode(question.text);
+			return {
+				key: question.id,
+				text: split.promptText,
+				code: split.code,
+				codeLanguage: split.language,
+				editingCode: false,
+				imageUrl: question.imageUrl ?? null,
+				timeLimitSeconds: question.timeLimitSeconds,
+				points: question.points,
+				options: question.options.map((option) => ({
+					key: option.id,
+					text: option.text,
+					isCorrect: option.isCorrect
+				}))
+			};
+		});
 	}
 
 	function snapshotPayload(
@@ -53,7 +69,11 @@
 			title: currentTitle.trim(),
 			description: currentDescription.trim() || null,
 			questions: currentQuestions.map((question) => ({
-				text: question.text.trim(),
+				text: combineQuestionPromptAndCode(
+					question.text,
+					question.code,
+					question.codeLanguage
+				).trim(),
 				imageUrl: question.imageUrl ?? null,
 				timeLimitSeconds: Number(question.timeLimitSeconds),
 				points: Number(question.points),
@@ -116,6 +136,90 @@
 	let uploadingImageQuestionIndex = $state<number | null>(null);
 	let uploadErrorByQuestionIndex = $state<Record<number, string>>({});
 
+	let showAiGenerator = $state(false);
+	let aiPrompt = $state('');
+	let aiQuestionCount = $state(5);
+	let aiDifficulty = $state<'easy' | 'medium' | 'hard'>('medium');
+	let aiGenerating = $state(false);
+	let aiError = $state('');
+
+	async function handleGenerateWithAi() {
+		if (aiGenerating || isArchived) return;
+		const cleanPrompt = aiPrompt.trim();
+		if (cleanPrompt.length < 3) {
+			aiError = 'Enter a topic or prompt (at least 3 characters).';
+			return;
+		}
+		const remainingSlots = QUIZ_LIMITS.maxQuestions - questions.length;
+		if (remainingSlots <= 0) {
+			aiError = `This quiz already has the maximum of ${QUIZ_LIMITS.maxQuestions} questions.`;
+			return;
+		}
+
+		aiGenerating = true;
+		aiError = '';
+		statusNotice = '';
+
+		try {
+			const countToRequest = Math.min(aiQuestionCount, remainingSlots, 15);
+			const response = await fetch('/api/quizzes/generate', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					prompt: cleanPrompt,
+					count: countToRequest,
+					difficulty: aiDifficulty,
+					timeLimitSeconds: QUIZ_LIMITS.defaultTimeLimitSeconds,
+					points: QUIZ_LIMITS.defaultPoints
+				})
+			});
+
+			if (!response.ok) {
+				const apiError = await readApiError(response);
+				aiError = apiError.message;
+				return;
+			}
+
+			const body = (await response.json()) as { questions: QuizQuestionInput[] };
+			let firstAddedKey: string | null = null;
+			for (const q of body.questions) {
+				if (questions.length >= QUIZ_LIMITS.maxQuestions) break;
+				const qKey = crypto.randomUUID();
+				if (!firstAddedKey) firstAddedKey = qKey;
+				const split = splitQuestionPromptAndCode(q.text);
+				questions.push({
+					key: qKey,
+					text: split.promptText,
+					code: split.code,
+					codeLanguage: split.language,
+					editingCode: false,
+					imageUrl: q.imageUrl ?? null,
+					timeLimitSeconds: q.timeLimitSeconds,
+					points: q.points,
+					options: q.options.map((opt) => ({
+						key: crypto.randomUUID(),
+						text: opt.text,
+						isCorrect: opt.isCorrect
+					}))
+				});
+			}
+
+			statusNotice = `Generated ${body.questions.length} ${body.questions.length === 1 ? 'question' : 'questions'} with AI. Review and save when ready.`;
+			showAiGenerator = false;
+			aiPrompt = '';
+
+			if (firstAddedKey) {
+				await tick();
+				const el = document.getElementById(`question-text-${firstAddedKey}`);
+				el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			}
+		} catch {
+			aiError = 'Could not reach the server to generate questions. Try again.';
+		} finally {
+			aiGenerating = false;
+		}
+	}
+
 	async function handleImageUpload(questionIndex: number, event: Event) {
 		const input = event.target as HTMLInputElement;
 		const file = input.files?.[0];
@@ -139,9 +243,9 @@
 				return;
 			}
 
-			const data = (await response.json()) as { url: string };
+			const uploaded = (await response.json()) as { url: string };
 			if (questions[questionIndex]) {
-				questions[questionIndex].imageUrl = data.url;
+				questions[questionIndex].imageUrl = uploaded.url;
 			}
 		} catch {
 			uploadErrorByQuestionIndex[questionIndex] = 'Failed to upload image. Please try again.';
@@ -159,11 +263,15 @@
 		}
 	}
 
-	function addQuestion() {
+	async function addQuestion() {
 		if (isArchived || questions.length >= QUIZ_LIMITS.maxQuestions) return;
+		const newKey = crypto.randomUUID();
 		questions.push({
-			key: crypto.randomUUID(),
+			key: newKey,
 			text: '',
+			code: '',
+			codeLanguage: '',
+			editingCode: false,
 			imageUrl: null,
 			timeLimitSeconds: QUIZ_LIMITS.defaultTimeLimitSeconds,
 			points: QUIZ_LIMITS.defaultPoints,
@@ -174,6 +282,10 @@
 				{ key: crypto.randomUUID(), text: '', isCorrect: false }
 			]
 		});
+		await tick();
+		const input = document.getElementById(`question-text-${newKey}`) as HTMLTextAreaElement | null;
+		input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		input?.focus({ preventScroll: true });
 	}
 
 	function removeQuestion(index: number) {
@@ -227,7 +339,7 @@
 
 	function toQuestionInputs(): QuizQuestionInput[] {
 		return questions.map((question) => ({
-			text: question.text,
+			text: combineQuestionPromptAndCode(question.text, question.code, question.codeLanguage),
 			imageUrl: question.imageUrl ?? null,
 			timeLimitSeconds: Number(question.timeLimitSeconds),
 			points: Number(question.points),
@@ -417,7 +529,7 @@
 <svelte:window onbeforeunload={handleBeforeUnload} />
 
 <svelte:head>
-	<title>{title || 'Edit quiz'} — {BRAND.name}</title>
+	<title>{title || 'Edit quiz'} · {BRAND.name}</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
@@ -426,7 +538,9 @@
 
 	<main class="editor-main">
 		<div class="editor-topbar">
-			<a class="nav-link" href={resolve('/(teacher)/dashboard')}>← Back to dashboard</a>
+			<a class="nav-link" href={resolve('/(teacher)/dashboard')}
+				><EnergyIcon name="arrow-left" /> Back to dashboard</a
+			>
 			<div class="editor-badges">
 				<span class="status-badge status-{status}">Status: {statusLabel(status)}</span>
 				{#if !isArchived}
@@ -499,16 +613,108 @@
 						</p>
 					</div>
 					{#if !isArchived}
-						<button
-							class="button button-secondary"
-							type="button"
-							onclick={addQuestion}
-							disabled={questions.length >= QUIZ_LIMITS.maxQuestions}
-						>
-							+ Add question
-						</button>
+						<div class="questions-header-actions">
+							<button
+								class="button button-secondary"
+								type="button"
+								onclick={() => {
+									showAiGenerator = !showAiGenerator;
+									aiError = '';
+								}}
+								disabled={questions.length >= QUIZ_LIMITS.maxQuestions}
+							>
+								<EnergyIcon name="ai-sparkle" />
+								{showAiGenerator ? 'Hide AI generator' : 'Generate with AI'}
+							</button>
+							<button
+								class="button button-secondary"
+								type="button"
+								onclick={addQuestion}
+								disabled={questions.length >= QUIZ_LIMITS.maxQuestions}
+							>
+								<EnergyIcon name="plus" /> Add question
+							</button>
+						</div>
 					{/if}
 				</div>
+
+				{#if !isArchived && showAiGenerator}
+					<div class="panel ai-generator-panel" role="region" aria-labelledby="ai-gen-heading">
+						<div class="ai-generator-header">
+							<div>
+								<h3 id="ai-gen-heading">
+									<EnergyIcon name="ai-sparkle" /> Generate questions with AI
+								</h3>
+								<p class="field-hint">
+									Describe a topic, grade level, or paste study notes and Cloudflare Workers AI will
+									draft multiple-choice questions for you.
+								</p>
+							</div>
+						</div>
+
+						{#if aiError}
+							<p class="form-error" role="alert">{aiError}</p>
+						{/if}
+
+						<div class="field">
+							<label for="ai-prompt-input">Topic or prompt</label>
+							<textarea
+								id="ai-prompt-input"
+								rows="3"
+								maxlength="2000"
+								placeholder="e.g. Photosynthesis and plant cells for 8th grade biology, or paste your lesson notes here…"
+								bind:value={aiPrompt}
+								disabled={aiGenerating}></textarea>
+						</div>
+
+						<div class="ai-generator-controls">
+							<div class="field">
+								<label for="ai-count-select">Number of questions</label>
+								<select
+									id="ai-count-select"
+									class="ai-select"
+									bind:value={aiQuestionCount}
+									disabled={aiGenerating}
+								>
+									<option value={3}>3 questions</option>
+									<option value={5}>5 questions</option>
+									<option value={8}>8 questions</option>
+									<option value={10}>10 questions</option>
+								</select>
+							</div>
+
+							<div class="field">
+								<label for="ai-difficulty-select">Difficulty</label>
+								<select
+									id="ai-difficulty-select"
+									class="ai-select"
+									bind:value={aiDifficulty}
+									disabled={aiGenerating}
+								>
+									<option value="easy">Easy</option>
+									<option value="medium">Medium</option>
+									<option value="hard">Hard</option>
+								</select>
+							</div>
+
+							<div class="ai-generator-submit">
+								<button
+									class="button button-primary"
+									type="button"
+									onclick={handleGenerateWithAi}
+									disabled={aiGenerating || aiPrompt.trim().length < 3}
+								>
+									{#if aiGenerating}
+										<span class="gruv-spinner" aria-hidden="true"></span>
+									{:else}
+										<EnergyIcon name="ai-sparkle" />
+									{/if}
+									{aiGenerating ? 'Generating with AI…' : 'Generate questions'}
+								</button>
+							</div>
+						</div>
+					</div>
+				{/if}
 
 				{#if fieldErrors.questions}
 					<p class="form-error" role="alert">{fieldErrors.questions}</p>
@@ -518,9 +724,21 @@
 					<div class="panel empty-questions">
 						<p>No questions yet. Add at least one question before publishing this quiz.</p>
 						{#if !isArchived}
-							<button class="button button-primary" type="button" onclick={addQuestion}>
-								+ Add first question
-							</button>
+							<div class="questions-header-actions">
+								<button class="button button-primary" type="button" onclick={addQuestion}>
+									<EnergyIcon name="plus" /> Add first question
+								</button>
+								<button
+									class="button button-secondary"
+									type="button"
+									onclick={() => {
+										showAiGenerator = true;
+										aiError = '';
+									}}
+								>
+									<EnergyIcon name="ai-sparkle" /> Generate with AI
+								</button>
+							</div>
 						{/if}
 					</div>
 				{:else}
@@ -538,7 +756,7 @@
 												disabled={qIndex === 0}
 												aria-label="Move question {qIndex + 1} up"
 											>
-												↑ Move up
+												<EnergyIcon name="arrow-up" /> Move up
 											</button>
 											<button
 												class="button button-secondary button-small"
@@ -547,31 +765,111 @@
 												disabled={qIndex === questions.length - 1}
 												aria-label="Move question {qIndex + 1} down"
 											>
-												↓ Move down
+												<EnergyIcon name="arrow-down" /> Move down
 											</button>
 											<button
 												class="button button-secondary button-small"
 												type="button"
 												onclick={() => removeQuestion(qIndex)}
 											>
-												Remove question
+												<EnergyIcon name="trash" /> Remove question
 											</button>
 										</div>
 									{/if}
 								</div>
 
 								<div class="field">
-									<label for="question-text-{question.key}">Question prompt</label>
-									<input
+									<div class="field-label-row">
+										<label for="question-text-{question.key}">Question prompt</label>
+										{#if !isArchived && !question.code}
+											<button
+												type="button"
+												class="code-block-insert-btn"
+												onclick={() => {
+													const split = splitQuestionPromptAndCode(question.text);
+													if (split.code) {
+														question.text = split.promptText;
+														question.code = split.code;
+														question.codeLanguage = '';
+														question.editingCode = false;
+													} else {
+														if (!question.text.trim()) {
+															question.text = 'What is the output of the following code?';
+														}
+														question.codeLanguage = '';
+														question.code = 'x = [1, 2, 3]\nfor n in x:\n  print(n * 2)';
+														question.editingCode = true;
+													}
+												}}
+											>
+												&lt;/&gt; Add code block
+											</button>
+										{/if}
+									</div>
+									<textarea
 										id="question-text-{question.key}"
-										type="text"
+										rows={Math.max(2, Math.min(6, question.text.split('\n').length))}
 										maxlength={QUIZ_LIMITS.maxQuestionTextLength}
 										placeholder="Ask a clear multiple-choice question"
 										bind:value={question.text}
+										onblur={() => {
+											if (!question.code) {
+												const split = splitQuestionPromptAndCode(question.text);
+												if (split.code) {
+													question.text = split.promptText;
+													question.code = split.code;
+													question.codeLanguage = '';
+												}
+											}
+										}}
 										disabled={isArchived}
 										aria-invalid={fieldErrors[`questions.${qIndex}.text`] ? 'true' : undefined}
-										required
-									/>
+										required></textarea>
+									{#if question.code || splitQuestionPromptAndCode(question.text).code}
+										<div class="code-preview-wrapper">
+											<div class="code-preview-header">
+												<span class="code-preview-label">Syntax highlight preview</span>
+												{#if !isArchived && question.code}
+													<div class="code-preview-actions">
+														<button
+															type="button"
+															class="code-action-btn"
+															onclick={() => {
+																question.editingCode = !question.editingCode;
+															}}
+														>
+															{question.editingCode ? 'Done' : 'Edit code'}
+														</button>
+														<button
+															type="button"
+															class="code-action-btn code-action-remove"
+															onclick={() => {
+																question.code = '';
+																question.codeLanguage = '';
+																question.editingCode = false;
+															}}
+														>
+															Remove
+														</button>
+													</div>
+												{/if}
+											</div>
+											{#if question.editingCode && !isArchived}
+												<textarea
+													class="code-editor-textarea"
+													rows={Math.max(3, Math.min(10, question.code.split('\n').length))}
+													placeholder="Enter code snippet..."
+													bind:value={question.code}></textarea>
+											{/if}
+											<QuestionText
+												codeOnly
+												headingTag="div"
+												text={question.code
+													? combineQuestionPromptAndCode(question.text, question.code)
+													: question.text}
+											/>
+										</div>
+									{/if}
 									{#if fieldErrors[`questions.${qIndex}.text`]}
 										<p class="field-error">{fieldErrors[`questions.${qIndex}.text`]}</p>
 									{/if}
@@ -615,7 +913,7 @@
 												{#if uploadingImageQuestionIndex === qIndex}
 													Uploading image...
 												{:else}
-													🖼️ Upload image
+													<EnergyIcon name="image-plus" /> Upload image
 												{/if}
 												<input
 													type="file"
@@ -687,7 +985,7 @@
 												onclick={() => addOption(qIndex)}
 												disabled={question.options.length >= QUIZ_LIMITS.maxOptions}
 											>
-												+ Add option
+												<EnergyIcon name="plus" /> Add option
 											</button>
 										{/if}
 									</div>
@@ -699,16 +997,17 @@
 									<div class="options-list">
 										{#each question.options as option, oIndex (option.key)}
 											<div class="option-row" data-correct={option.isCorrect}>
-												<label class="correct-toggle">
+												<label class="correct-toggle" data-checked={option.isCorrect}>
 													<input
-														type="radio"
+														type="checkbox"
+														class="gruv-checkbox"
 														name="correct-option-{question.key}"
 														checked={option.isCorrect}
 														onchange={() => selectCorrectOption(qIndex, oIndex)}
 														disabled={isArchived}
 													/>
-													<span>
-														{option.isCorrect ? '✓ Correct' : 'Mark correct'}
+													<span class="correct-toggle-label">
+														{option.isCorrect ? 'Correct' : 'Mark correct'}
 													</span>
 												</label>
 
@@ -750,6 +1049,19 @@
 							</li>
 						{/each}
 					</ol>
+
+					{#if !isArchived}
+						<div class="questions-bottom-actions">
+							<button
+								class="button button-secondary add-question-bottom-btn"
+								type="button"
+								onclick={addQuestion}
+								disabled={questions.length >= QUIZ_LIMITS.maxQuestions}
+							>
+								<EnergyIcon name="plus" /> Add question
+							</button>
+						</div>
+					{/if}
 				{/if}
 			</section>
 
@@ -875,8 +1187,9 @@
 <style>
 	.editor-main {
 		display: grid;
+		align-content: start;
 		gap: var(--space-5);
-		padding-block: var(--space-5) var(--space-7);
+		padding-block: var(--space-6);
 	}
 
 	.editor-topbar {
@@ -905,15 +1218,15 @@
 	}
 
 	.status-draft {
-		border: 1px solid #d9b424;
-		background: #fff7d1;
-		color: var(--color-ink);
+		border: 1px solid var(--gruv-yellow);
+		background: #3b311a;
+		color: var(--gruv-yellow);
 	}
 
 	.status-published {
-		border: 1px solid #1d9a65;
-		background: #e3faef;
-		color: #0e5a3a;
+		border: 1px solid var(--gruv-green);
+		background: #2b331b;
+		color: var(--gruv-green);
 	}
 
 	.status-archived {
@@ -929,9 +1242,9 @@
 	}
 
 	.dirty-badge[data-dirty='true'] {
-		border-color: var(--color-energy);
-		background: #fff2ec;
-		color: #9a3412;
+		border-color: var(--gruv-orange);
+		background: #3b2618;
+		color: var(--gruv-orange);
 	}
 
 	.archived-banner {
@@ -942,13 +1255,13 @@
 	}
 
 	.status-notice {
-		border: 1px solid #1d9a65;
+		border: 2px solid var(--gruv-green);
 		border-radius: var(--radius-sm);
-		background: #e3faef;
+		background: #2b331b;
 		padding: var(--space-3);
-		color: #0e5a3a;
+		color: var(--gruv-fg0);
 		font-size: 0.9rem;
-		font-weight: 700;
+		font-weight: 400;
 	}
 
 	.editor-form {
@@ -969,11 +1282,11 @@
 
 	.field textarea {
 		width: 100%;
-		border: 1px solid var(--color-border);
+		border: 2px solid var(--color-border);
 		border-radius: var(--radius-sm);
-		background: #fbfcff;
+		background: var(--gruv-bg-hard);
 		padding: 0.75rem 0.85rem;
-		color: var(--color-ink);
+		color: var(--color-heading);
 		font: inherit;
 		resize: vertical;
 	}
@@ -991,6 +1304,46 @@
 		gap: var(--space-3);
 	}
 
+	.questions-header-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-2);
+	}
+
+	.ai-generator-panel {
+		display: grid;
+		gap: var(--space-4);
+		width: 100%;
+		border: 1.5px solid var(--color-brand);
+		background: var(--color-tint);
+	}
+
+	.ai-generator-header h3 {
+		font-size: 1.15rem;
+	}
+
+	.ai-generator-controls {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		gap: var(--space-4);
+	}
+
+	.ai-select {
+		min-width: 10rem;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-sm);
+		background: var(--color-surface);
+		padding: 0.65rem 0.85rem;
+		color: var(--color-ink);
+		font: inherit;
+	}
+
+	.ai-generator-submit {
+		margin-left: auto;
+	}
+
 	.empty-questions {
 		display: grid;
 		justify-items: start;
@@ -1004,6 +1357,24 @@
 		margin: 0;
 		padding: 0;
 		list-style: none;
+	}
+
+	.questions-bottom-actions {
+		display: flex;
+		justify-content: flex-start;
+	}
+
+	.add-question-bottom-btn {
+		width: 100%;
+		border: 1.5px dashed var(--color-brand);
+		background: var(--color-surface);
+		padding-block: 0.9rem;
+		color: var(--color-brand);
+		font-weight: 700;
+	}
+
+	.add-question-bottom-btn:hover:not(:disabled) {
+		background: var(--color-tint);
 	}
 
 	.question-card {
@@ -1061,25 +1432,54 @@
 		grid-template-columns: auto 1fr auto;
 		align-items: start;
 		gap: var(--space-3);
-		border: 1px solid var(--color-border);
+		border: 2px solid var(--color-border);
 		border-radius: var(--radius-md);
-		background: #fbfcff;
+		background: var(--gruv-bg1);
 		padding: var(--space-3);
 	}
 
 	.option-row[data-correct='true'] {
-		border-color: var(--color-success);
-		background: #f0fdf7;
+		border-color: var(--gruv-green);
+		background: #2b331b;
 	}
 
 	.correct-toggle {
 		display: inline-flex;
 		align-items: center;
-		gap: var(--space-2);
+		gap: 0.6rem;
 		min-height: 2.75rem;
-		font-size: 0.85rem;
-		font-weight: 800;
+		border: 2px solid var(--gruv-bg3);
+		border-radius: var(--radius-sm);
+		background: var(--gruv-bg-hard);
+		padding: 0.4rem 0.75rem;
+		color: var(--color-muted);
+		font-size: 0.82rem;
+		font-weight: 400;
+		box-shadow: 0 2px 0 #141617;
 		cursor: pointer;
+		user-select: none;
+		transition:
+			border-color 140ms ease,
+			background-color 140ms ease,
+			color 140ms ease,
+			transform 120ms ease;
+	}
+
+	.correct-toggle:hover {
+		border-color: var(--gruv-orange);
+		color: var(--gruv-fg0);
+		transform: translateY(-1px);
+	}
+
+	.correct-toggle[data-checked='true'] {
+		border-color: var(--gruv-green);
+		background: #1f2612;
+		color: var(--gruv-green);
+	}
+
+	.correct-toggle-label {
+		line-height: 1;
+		white-space: nowrap;
 	}
 
 	.option-input-wrap {
@@ -1167,8 +1567,8 @@
 		max-height: 8rem;
 		border-radius: var(--radius-sm);
 		object-fit: contain;
-		background: #ffffff;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+		background: var(--gruv-bg-hard);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 	}
 
 	.image-preview-actions {
@@ -1209,6 +1609,91 @@
 
 	.button-danger-text {
 		color: var(--color-danger);
+	}
+
+	.field-label-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-2);
+	}
+
+	.code-block-insert-btn {
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-sm);
+		background: var(--color-tint);
+		padding: 0.18rem 0.55rem;
+		font-family: var(--font-mono);
+		font-size: 0.76rem;
+		font-weight: 700;
+		color: var(--color-brand);
+		cursor: pointer;
+	}
+
+	.code-block-insert-btn:hover {
+		border-color: var(--color-brand);
+	}
+
+	.code-preview-wrapper {
+		display: grid;
+		gap: var(--space-2);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+		background: var(--color-tint);
+		padding: var(--space-3);
+	}
+
+	.code-preview-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-2);
+	}
+
+	.code-preview-label {
+		font-size: 0.75rem;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--color-muted);
+	}
+
+	.code-preview-actions {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+	}
+
+	.code-action-btn {
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-sm);
+		background: var(--color-surface);
+		padding: 0.15rem 0.5rem;
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: var(--color-ink);
+		cursor: pointer;
+	}
+
+	.code-action-btn:hover {
+		border-color: var(--color-brand);
+	}
+
+	.code-action-remove {
+		color: var(--color-danger);
+	}
+
+	.code-editor-textarea {
+		width: 100%;
+		border: 2px solid var(--color-border);
+		border-radius: var(--radius-sm);
+		background: var(--gruv-bg-hard);
+		color: var(--gruv-fg1);
+		padding: var(--space-2) var(--space-3);
+		font-family: var(--font-mono);
+		font-size: 0.9rem;
+		line-height: 1.5;
+		resize: vertical;
 	}
 
 	@media (max-width: 44rem) {

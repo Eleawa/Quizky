@@ -265,17 +265,19 @@ export async function listSessionAnswers(
 			.orderBy(asc(participantAnswers.submittedAt), asc(participantAnswers.id));
 	}
 
-	const rows: ParticipantAnswerRow[] = [];
+	const chunks: string[][] = [];
 	for (let i = 0; i < participantIds.length; i += D1_MAX_IN_PARAMS) {
-		const chunk = participantIds.slice(i, i + D1_MAX_IN_PARAMS);
-		const chunkRows = await db
-			.select()
-			.from(participantAnswers)
-			.where(inArray(participantAnswers.participantId, chunk));
-		rows.push(...chunkRows);
+		chunks.push(participantIds.slice(i, i + D1_MAX_IN_PARAMS));
 	}
 
-	return rows.sort((a, b) => {
+	const chunkResults = await Promise.all(
+		chunks.map((chunk) =>
+			db.select().from(participantAnswers).where(inArray(participantAnswers.participantId, chunk))
+		)
+	);
+	const rows = chunkResults.flat();
+
+	return rows.toSorted((a, b) => {
 		const timeDiff = a.submittedAt.getTime() - b.submittedAt.getTime();
 		if (timeDiff !== 0) return timeDiff;
 		return a.id.localeCompare(b.id);

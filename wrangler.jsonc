@@ -23,5 +23,9 @@
 			"binding": "PRIVATE_SERVICE",
 			"service": "quizky-session-room"
 		}
-	]
+	],
+	"ai": {
+		"binding": "AI",
+		"remote": true
+	}
 }

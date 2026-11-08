@@ -1,8 +1,18 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
+	import EnergyIcon from '#lib/components/EnergyIcon.svelte';
+	import QuestionText from '#lib/components/QuestionText.svelte';
 	import SiteHeader from '#lib/components/SiteHeader.svelte';
+	import { gsapPop, gsapStagger } from '#lib/shared/animations.js';
 	import { BRAND } from '#lib/shared/brand.js';
+	import {
+		playClockPreview,
+		playCountdownTick,
+		playTimeUpSound,
+		stopCountdownSound,
+		unlockAudioContext
+	} from '#lib/shared/sound.js';
 	import {
 		PROTOCOL_VERSION,
 		type GameSessionStatus,
@@ -48,6 +58,8 @@
 	let totalEarnedScore = $derived(studentResults.reduce((sum, item) => sum + item.scoreAwarded, 0));
 	let correctAnswersCount = $derived(studentResults.filter((item) => item.isCorrect).length);
 	let nowMs = $state<number>(Date.now());
+	let soundEnabled = $state(true);
+	let lastTickedSecond: number | null = null;
 
 	let connectionState = $state<'connecting' | 'connected' | 'reconnecting' | 'disconnected'>(
 		'connecting'
@@ -114,7 +126,20 @@
 
 		const clockInterval = setInterval(() => {
 			nowMs = Date.now();
-		}, 250);
+			if (status === 'in_progress' && questionPhase === 'open' && currentQuestion && soundEnabled) {
+				const deadlineMs = Date.parse(currentQuestion.deadlineAt);
+				if (Number.isFinite(deadlineMs)) {
+					const secs = Math.max(0, Math.ceil((deadlineMs - nowMs) / 1000));
+					if (secs >= 1 && secs <= 5 && secs !== lastTickedSecond) {
+						lastTickedSecond = secs;
+						playCountdownTick(secs);
+					} else if (secs === 0 && lastTickedSecond !== null && lastTickedSecond > 0) {
+						lastTickedSecond = 0;
+						playTimeUpSound();
+					}
+				}
+			}
+		}, 100);
 
 		function connect() {
 			if (destroyed) return;
@@ -184,10 +209,15 @@
 						hasSubmitted = false;
 						selectedOptionId = null;
 						lastQuestionResult = null;
+						lastTickedSecond = null;
 						nowMs = Date.now();
 					} else if (message.type === 'question_ended' && message.payload) {
 						const res = message.payload as StudentQuestionResult;
 						questionPhase = 'closed';
+						if (soundEnabled && lastTickedSecond !== null && lastTickedSecond > 0) {
+							lastTickedSecond = 0;
+							playTimeUpSound();
+						}
 						if (res.role === 'student') {
 							lastQuestionResult = res;
 							selectedOptionId = res.selectedOptionId;
@@ -230,8 +260,10 @@
 	});
 </script>
 
+<svelte:window onpointerdown={unlockAudioContext} onkeydown={unlockAudioContext} />
+
 <svelte:head>
-	<title>{data.session.quizTitle} — {BRAND.name}</title>
+	<title>{data.session.quizTitle} · {BRAND.name}</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
@@ -244,15 +276,37 @@
 				Room: <strong>{data.session.joinCode}</strong> · Player:
 				<strong>{data.participant.nickname}</strong>
 			</span>
-			<span class="connection-pill" data-state={connectionState} role="status">
-				{#if connectionState === 'connected'}
-					● Connected
-				{:else if connectionState === 'connecting'}
-					◌ Connecting…
-				{:else}
-					◌ Reconnecting…
-				{/if}
-			</span>
+			<div class="play-topbar-actions">
+				<button
+					type="button"
+					class="sound-toggle-pill"
+					aria-pressed={soundEnabled}
+					onclick={() => {
+						unlockAudioContext();
+						soundEnabled = !soundEnabled;
+						if (soundEnabled) {
+							playClockPreview();
+						} else {
+							stopCountdownSound();
+						}
+					}}
+				>
+					{#if soundEnabled}
+						<EnergyIcon name="volume-high" /> Sound on
+					{:else}
+						<EnergyIcon name="volume-x" /> Muted
+					{/if}
+				</button>
+				<span class="connection-pill" data-state={connectionState} role="status">
+					{#if connectionState === 'connected'}
+						<EnergyIcon name="bolt" /> Connected
+					{:else if connectionState === 'connecting'}
+						<span class="gruv-spinner" aria-hidden="true"></span> Connecting…
+					{:else}
+						<span class="gruv-spinner" aria-hidden="true"></span> Reconnecting…
+					{/if}
+				</span>
+			</div>
 		</div>
 
 		{#if wsError}
@@ -260,7 +314,7 @@
 		{/if}
 
 		{#if status === 'lobby'}
-			<section class="panel waiting-card" aria-labelledby="waiting-title">
+			<section class="panel waiting-card" aria-labelledby="waiting-title" use:gsapPop>
 				<p class="auth-eyebrow">You're in!</p>
 				<h1 id="waiting-title">{data.participant.nickname}</h1>
 				<p class="waiting-quiz-title">{data.session.quizTitle}</p>
@@ -289,7 +343,7 @@
 				</div>
 			</section>
 		{:else if status === 'in_progress' && currentQuestion}
-			<section class="panel question-card" aria-labelledby="student-question-title">
+			<section class="panel question-card" aria-labelledby="student-question-title" use:gsapPop>
 				<div class="student-question-meta">
 					<span class="question-progress-badge">
 						Question {currentQuestion.position + 1} of {currentQuestion.totalQuestions}
@@ -300,16 +354,16 @@
 						data-urgent={questionPhase === 'open' && remainingSeconds <= 5}
 					>
 						{#if questionPhase === 'open'}
-							⏱ {remainingSeconds}s
+							<EnergyIcon name="timer" /> {remainingSeconds}s
 						{:else}
 							Time's up
 						{/if}
 					</span>
 				</div>
 
-				<h1 id="student-question-title" class="student-question-text">
-					{currentQuestion.text}
-				</h1>
+				<div class="student-question-text">
+					<QuestionText id="student-question-title" headingTag="h1" text={currentQuestion.text} />
+				</div>
 
 				{#if currentQuestion.imageUrl}
 					<div class="student-question-media">
@@ -321,7 +375,12 @@
 					</div>
 				{/if}
 
-				<div class="student-options-list" role="group" aria-label="Answer options">
+				<div
+					class="student-options-list"
+					role="group"
+					aria-label="Answer options"
+					use:gsapStagger={{ selector: '.student-option-button', stagger: 0.06, y: 14 }}
+				>
 					{#each currentQuestion.options as option, idx (option.id)}
 						<button
 							type="button"
@@ -339,24 +398,32 @@
 				</div>
 
 				{#if questionPhase === 'open' && hasSubmitted}
-					<div class="submission-banner" role="status">
-						<strong>✓ Answer locked in!</strong> Waiting for the question to finish…
+					<div class="submission-banner" role="status" use:gsapPop>
+						<strong><EnergyIcon name="check" /> Answer locked in!</strong> Waiting for the question to
+						finish…
 					</div>
 				{:else if questionPhase === 'closed' && lastQuestionResult}
-					<div class="result-banner" data-correct={lastQuestionResult.isCorrect} role="status">
+					<div
+						class="result-banner"
+						data-correct={lastQuestionResult.isCorrect}
+						role="status"
+						use:gsapPop
+					>
 						{#if lastQuestionResult.isCorrect}
-							<strong>🎉 Correct! +{lastQuestionResult.scoreAwarded} pts</strong>
+							<strong
+								><EnergyIcon name="trophy" /> Correct! +{lastQuestionResult.scoreAwarded} pts</strong
+							>
 						{:else if lastQuestionResult.selectedOptionId === null}
-							<strong>⏱ Time expired — 0 pts</strong>
+							<strong><EnergyIcon name="timer" /> Time expired: 0 pts</strong>
 						{:else}
-							<strong>✗ Not quite — 0 pts</strong>
+							<strong><EnergyIcon name="close" /> Not quite: 0 pts</strong>
 						{/if}
 						<span>Get ready for the next question…</span>
 					</div>
 				{/if}
 			</section>
 		{:else}
-			<section class="panel waiting-card" aria-labelledby="completed-title">
+			<section class="panel waiting-card" aria-labelledby="completed-title" use:gsapPop>
 				<p class="auth-eyebrow">
 					{status === 'cancelled' ? 'Session cancelled' : 'Quiz complete!'}
 				</p>
@@ -399,9 +466,10 @@
 <style>
 	.play-main {
 		display: grid;
+		align-content: center;
 		justify-items: center;
-		gap: var(--space-5);
-		padding-block: var(--space-5) var(--space-7);
+		gap: var(--space-4);
+		padding-block: var(--space-5) var(--space-6);
 	}
 
 	.play-topbar {
@@ -410,11 +478,19 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: var(--space-3);
-		width: min(100%, 44rem);
+		width: min(100%, 58rem);
+	}
+
+	.play-topbar-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-2);
 	}
 
 	.code-pill,
-	.connection-pill {
+	.connection-pill,
+	.sound-toggle-pill {
 		display: inline-flex;
 		align-items: center;
 		gap: var(--space-1);
@@ -426,23 +502,33 @@
 		font-weight: 700;
 	}
 
+	.sound-toggle-pill {
+		color: var(--color-ink);
+		cursor: pointer;
+	}
+
+	.sound-toggle-pill:hover {
+		background: var(--color-tint);
+	}
+
 	.connection-pill[data-state='connected'] {
-		border-color: #1d9a65;
-		background: #e3faef;
-		color: #0e5a3a;
+		border-color: var(--gruv-green);
+		background: #2b331b;
+		color: var(--gruv-green);
 	}
 
 	.connection-pill[data-state='reconnecting'] {
-		border-color: var(--color-energy);
-		background: #fff2ec;
-		color: #9a3412;
+		border-color: var(--gruv-orange);
+		background: #3b2618;
+		color: var(--gruv-orange);
 	}
 
 	.waiting-card,
 	.question-card {
 		display: grid;
-		gap: var(--space-4);
-		width: min(100%, 44rem);
+		gap: var(--space-5);
+		width: min(100%, 58rem);
+		padding: clamp(var(--space-6), 5vw, var(--space-7));
 	}
 
 	.waiting-card {
@@ -452,7 +538,7 @@
 	.waiting-quiz-title {
 		color: var(--color-muted);
 		font-size: 1.15rem;
-		font-weight: 700;
+		font-weight: 400;
 	}
 
 	.waiting-pulse {
@@ -461,18 +547,19 @@
 		align-items: center;
 		justify-content: center;
 		gap: var(--space-3);
-		border: 2px solid var(--color-sunshine);
+		border: 2px solid var(--gruv-yellow);
 		border-radius: var(--radius-md);
-		background: #fffbeb;
+		background: #3b311a;
+		color: var(--gruv-yellow);
 		padding: var(--space-4);
-		font-weight: 800;
+		font-weight: 400;
 	}
 
 	.pulse-dot {
 		width: 0.75rem;
 		height: 0.75rem;
 		border-radius: 50%;
-		background: var(--color-energy);
+		background: var(--gruv-orange);
 	}
 
 	.student-question-meta {
@@ -489,12 +576,13 @@
 		border-radius: var(--radius-pill);
 		padding: 0.35rem 0.9rem;
 		font-size: 0.9rem;
-		font-weight: 800;
+		font-weight: 400;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.question-progress-badge {
-		background: var(--color-brand);
-		color: #ffffff;
+		background: var(--gruv-orange);
+		color: var(--gruv-bg-hard);
 	}
 
 	.timer-badge {
@@ -503,19 +591,21 @@
 	}
 
 	.timer-badge[data-urgent='true'] {
-		border-color: #dc2626;
-		background: #fef2f2;
-		color: #991b1b;
+		border-color: var(--gruv-red);
+		background: var(--color-danger-tint);
+		color: var(--gruv-red);
 	}
 
 	.student-question-text {
-		font-size: clamp(1.3rem, 3vw, 1.85rem);
+		font-size: clamp(1.5rem, 3.2vw, 2.15rem);
+		white-space: pre-wrap;
 	}
 
 	.student-question-media {
 		display: flex;
 		justify-content: center;
 		width: 100%;
+		border: 1px solid var(--color-border);
 		border-radius: var(--radius-md);
 		background: var(--color-tint);
 		padding: var(--space-3);
@@ -524,15 +614,15 @@
 
 	.student-question-image {
 		max-width: 100%;
-		max-height: 16rem;
+		max-height: 20rem;
 		border-radius: var(--radius-sm);
 		object-fit: contain;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 	}
 
 	.student-options-list {
 		display: grid;
-		gap: var(--space-3);
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+		gap: var(--space-4);
 	}
 
 	.student-option-button {
@@ -540,38 +630,43 @@
 		align-items: center;
 		gap: var(--space-3);
 		width: 100%;
-		min-height: 4rem;
+		min-height: 4.5rem;
 		border: 2px solid var(--color-border);
 		border-radius: var(--radius-md);
-		background: var(--color-surface);
-		padding: var(--space-3) var(--space-4);
+		background: var(--color-tint);
+		padding: var(--space-4) var(--space-5);
 		color: var(--color-ink);
 		font: inherit;
 		font-size: 1.05rem;
-		font-weight: 800;
+		font-weight: 400;
 		text-align: left;
+		box-shadow: 0 3px 0 var(--gruv-bg-hard);
 		cursor: pointer;
 		transition:
-			transform 80ms ease,
+			transform 100ms ease,
+			box-shadow 100ms ease,
 			border-color 120ms ease,
 			background-color 120ms ease;
 	}
 
 	.student-option-button:hover:not(:disabled) {
-		border-color: var(--color-brand);
-		background: var(--color-tint);
+		border-color: var(--gruv-orange);
+		background: var(--gruv-bg2);
+		color: var(--gruv-fg0);
+		transform: translateY(-2px);
+		box-shadow: 0 5px 0 var(--gruv-bg-hard);
 	}
 
 	.student-option-button[data-selected='true'] {
-		border-color: var(--color-brand);
-		background: #eef2ff;
-		color: var(--color-brand);
+		border-color: var(--gruv-orange);
+		background: #3b2618;
+		color: var(--gruv-fg0);
 	}
 
 	.student-option-button[data-correct='true'] {
-		border-color: #1d9a65;
-		background: #e3faef;
-		color: #0e5a3a;
+		border-color: var(--gruv-green);
+		background: #2b331b;
+		color: var(--gruv-green);
 	}
 
 	.student-option-button:disabled {
@@ -581,12 +676,12 @@
 	.option-letter {
 		display: inline-grid;
 		place-items: center;
-		width: 2.2rem;
-		height: 2.2rem;
+		width: 2.1rem;
+		height: 2.1rem;
 		border-radius: 50%;
-		background: var(--color-tint);
-		color: var(--color-brand);
-		font-weight: 900;
+		background: var(--gruv-orange);
+		color: var(--gruv-bg-hard);
+		font-weight: 400;
 		flex-shrink: 0;
 	}
 
@@ -603,25 +698,25 @@
 		gap: var(--space-2);
 		border-radius: var(--radius-md);
 		padding: var(--space-3) var(--space-4);
-		font-weight: 700;
+		font-weight: 400;
 	}
 
 	.submission-banner {
-		border: 1px solid var(--color-brand);
-		background: #eef2ff;
-		color: var(--color-brand);
+		border: 2px solid var(--gruv-yellow);
+		background: #3b311a;
+		color: var(--gruv-yellow);
 	}
 
 	.result-banner {
-		border: 1px solid #dc2626;
-		background: #fef2f2;
-		color: #991b1b;
+		border: 2px solid var(--gruv-red);
+		background: var(--color-danger-tint);
+		color: var(--gruv-red);
 	}
 
 	.result-banner[data-correct='true'] {
-		border-color: #1d9a65;
-		background: #e3faef;
-		color: #0e5a3a;
+		border-color: var(--gruv-green);
+		background: #2b331b;
+		color: var(--gruv-green);
 	}
 
 	.completion-actions {
@@ -660,13 +755,13 @@
 		background: var(--color-tint);
 		padding: 0.35rem 0.85rem;
 		font-size: 0.9rem;
-		font-weight: 700;
+		font-weight: 400;
 	}
 
 	.roster-pill[data-self='true'] {
-		border-color: var(--color-brand);
-		background: #eef2ff;
-		color: var(--color-brand);
+		border-color: var(--gruv-orange);
+		background: #3b2618;
+		color: var(--gruv-orange);
 	}
 
 	.roster-pill[data-status='disconnected'] {
@@ -700,8 +795,8 @@
 
 	.score-label {
 		color: var(--color-muted);
-		font-size: 0.8rem;
-		font-weight: 800;
+		font-size: 0.78rem;
+		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 	}
@@ -709,6 +804,7 @@
 	.score-val {
 		color: var(--color-brand);
 		font-size: 1.5rem;
-		font-weight: 900;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
 	}
 </style>

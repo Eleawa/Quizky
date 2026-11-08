@@ -86,6 +86,15 @@ describe('WebSocket client protocol message validation', () => {
 			})
 		);
 		expect(startMsg.ok).toBe(true);
+
+		const skipMsg = parseClientMessage(
+			JSON.stringify({
+				version: 1,
+				type: 'teacher_skip_question',
+				requestId: 'req-skip'
+			})
+		);
+		expect(skipMsg.ok).toBe(true);
 	});
 
 	it('rejects malformed JSON, unknown types, and oversized payloads', () => {

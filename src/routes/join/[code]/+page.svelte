@@ -73,7 +73,7 @@
 </script>
 
 <svelte:head>
-	<title>Join game {data.code} — {BRAND.name}</title>
+	<title>Join game {data.code} · {BRAND.name}</title>
 </svelte:head>
 
 <div class="page">
@@ -154,6 +154,9 @@
 					type="submit"
 					disabled={pending || (data.session !== null && data.session.status !== 'lobby')}
 				>
+					{#if pending}
+						<span class="gruv-spinner" aria-hidden="true"></span>
+					{/if}
 					{pending ? 'Joining lobby…' : 'Join game'}
 				</button>
 			</form>
@@ -167,8 +170,11 @@
 
 <style>
 	.code-input {
-		font-weight: 900;
+		font-family: var(--font-mono);
+		font-size: 1.05rem;
+		font-weight: 700;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
+		font-variant-numeric: tabular-nums;
 	}
 </style>

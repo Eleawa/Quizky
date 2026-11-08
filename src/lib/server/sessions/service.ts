@@ -657,26 +657,26 @@ export async function listTeacherRecentSessions(
 	limit: number = 10
 ): Promise<TeacherSessionListItem[]> {
 	const rows = await listSessionsByTeacher(db, teacherId, limit);
-	const items: TeacherSessionListItem[] = [];
-
-	for (const row of rows) {
-		const [questionCount, participantCount] = await Promise.all([
-			countSessionQuestions(db, row.id),
-			countSessionParticipants(db, row.id)
-		]);
-		items.push({
-			id: row.id,
-			quizId: row.quizId,
-			quizTitle: row.quizTitle,
-			joinCode: row.joinCode,
-			status: row.status,
-			questionCount,
-			participantCount,
-			createdAt: row.createdAt.toISOString(),
-			startedAt: row.startedAt ? row.startedAt.toISOString() : null,
-			endedAt: row.endedAt ? row.endedAt.toISOString() : null
-		});
-	}
+	const items = await Promise.all(
+		rows.map(async (row) => {
+			const [questionCount, participantCount] = await Promise.all([
+				countSessionQuestions(db, row.id),
+				countSessionParticipants(db, row.id)
+			]);
+			return {
+				id: row.id,
+				quizId: row.quizId,
+				quizTitle: row.quizTitle,
+				joinCode: row.joinCode,
+				status: row.status,
+				questionCount,
+				participantCount,
+				createdAt: row.createdAt.toISOString(),
+				startedAt: row.startedAt ? row.startedAt.toISOString() : null,
+				endedAt: row.endedAt ? row.endedAt.toISOString() : null
+			};
+		})
+	);
 
 	return items;
 }

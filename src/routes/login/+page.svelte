@@ -48,7 +48,7 @@
 </script>
 
 <svelte:head>
-	<title>Sign in — {BRAND.name}</title>
+	<title>Sign in · {BRAND.name}</title>
 	<meta name="description" content="Sign in to your Quizky teacher account." />
 </svelte:head>
 
@@ -101,6 +101,9 @@
 				</div>
 
 				<button class="button button-primary auth-submit" type="submit" disabled={pending}>
+					{#if pending}
+						<span class="gruv-spinner" aria-hidden="true"></span>
+					{/if}
 					{pending ? 'Signing in…' : 'Sign in'}
 				</button>
 			</form>

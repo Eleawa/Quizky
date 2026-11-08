@@ -30,7 +30,7 @@ function migrationStatements(): string[] {
 	const directory = join(process.cwd(), 'migrations');
 	return readdirSync(directory)
 		.filter((file) => file.endsWith('.sql'))
-		.sort()
+		.toSorted()
 		.flatMap((file) =>
 			readFileSync(join(directory, file), 'utf8')
 				.split('--> statement-breakpoint')
@@ -50,7 +50,7 @@ describe('question images integration', () => {
 		for (const statement of migrationStatements()) {
 			await proxy.env.DB.prepare(statement).run();
 		}
-	});
+	}, 30_000);
 
 	afterAll(async () => {
 		await proxy?.dispose();

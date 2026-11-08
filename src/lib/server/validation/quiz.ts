@@ -134,9 +134,42 @@ export const publishableQuizSchema = z
 	})
 	.strict();
 
+export const generateQuizQuestionsSchema = z
+	.object({
+		prompt: z
+			.string()
+			.trim()
+			.min(3, 'Enter a topic or prompt (at least 3 characters).')
+			.max(2000, 'Prompt must be at most 2000 characters.'),
+		count: z
+			.number()
+			.int('Question count must be a whole number.')
+			.min(1, 'Generate at least 1 question.')
+			.max(15, 'Generate at most 15 questions at a time.')
+			.optional()
+			.default(5),
+		difficulty: z.enum(['easy', 'medium', 'hard']).optional().default('medium'),
+		timeLimitSeconds: z
+			.number()
+			.int()
+			.min(QUIZ_LIMITS.minTimeLimitSeconds)
+			.max(QUIZ_LIMITS.maxTimeLimitSeconds)
+			.optional()
+			.default(QUIZ_LIMITS.defaultTimeLimitSeconds),
+		points: z
+			.number()
+			.int()
+			.min(QUIZ_LIMITS.minPoints)
+			.max(QUIZ_LIMITS.maxPoints)
+			.optional()
+			.default(QUIZ_LIMITS.defaultPoints)
+	})
+	.strict();
+
 export type CreateQuizInput = z.input<typeof createQuizSchema>;
 export type UpdateQuizInput = z.input<typeof updateQuizSchema>;
 export type ValidatedQuestionInput = z.infer<typeof quizQuestionInputSchema>;
+export type GenerateQuizQuestionsInput = z.infer<typeof generateQuizQuestionsSchema>;
 
 export interface PublishValidationResult {
 	valid: boolean;

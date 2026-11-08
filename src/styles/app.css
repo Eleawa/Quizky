@@ -4,39 +4,99 @@
 	box-sizing: border-box;
 }
 
+/* Custom Scrollbars */
+* {
+	scrollbar-width: thin;
+	scrollbar-color: var(--color-border) transparent;
+}
+
+*::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+	background-color: var(--color-border);
+	border-radius: var(--radius-pill);
+	border: 2px solid transparent;
+	background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+	background-color: var(--color-brand);
+}
+
+*::-webkit-scrollbar-corner {
+	background: transparent;
+}
+
 html {
-	color-scheme: light;
+	color-scheme: dark;
 	-webkit-text-size-adjust: 100%;
 }
 
 body {
 	margin: 0;
 	min-height: 100dvh;
-	background: var(--color-tint);
+	background-color: var(--color-canvas);
 	color: var(--color-ink);
 	font-family: var(--font-sans);
-	font-size: 1rem;
+	font-weight: 400;
+	font-size: 0.96rem;
 	line-height: 1.6;
-	text-rendering: optimizeLegibility;
+	letter-spacing: 0.015em;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	overflow-wrap: break-word;
 }
 
 h1,
 h2,
 h3,
+h4,
+h5,
+h6,
 p {
 	margin: 0;
 }
 
 h1,
 h2,
-h3 {
+h3,
+h4,
+h5,
+h6 {
 	font-family: var(--font-display);
-	line-height: 1.1;
-	letter-spacing: -0.02em;
+	font-weight: 400;
+	color: var(--color-heading);
+	line-height: 1.25;
+	letter-spacing: 0.01em;
+}
+
+strong,
+b {
+	font-weight: 400;
+	color: var(--color-heading);
+}
+
+code,
+pre {
+	font-family: var(--font-mono);
 }
 
 a {
-	color: var(--color-brand);
+	color: var(--gruv-yellow);
+	text-decoration-thickness: 2px;
+	text-underline-offset: 0.2em;
+	transition: color 140ms ease;
+}
+
+a:hover {
+	color: var(--gruv-orange);
 }
 
 img,
@@ -46,13 +106,13 @@ svg {
 }
 
 :focus-visible {
-	outline: 3px solid var(--color-energy);
+	outline: 3px solid var(--gruv-yellow);
 	outline-offset: 3px;
 }
 
 ::selection {
-	background: var(--color-sunshine);
-	color: var(--color-ink);
+	background: var(--gruv-orange);
+	color: var(--gruv-bg-hard);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -72,18 +132,20 @@ svg {
 	min-height: 100dvh;
 	width: min(100% - 2rem, var(--page-max));
 	margin-inline: auto;
-	padding-block: var(--space-5) var(--space-4);
+	padding-block: var(--space-4) var(--space-4);
 }
 
 .page > main {
 	flex: 1;
+	align-content: start;
+	width: 100%;
 }
 
 .site-footer {
-	border-top: 1px solid var(--color-border);
+	border-top: 2px solid var(--color-border);
 	padding-top: var(--space-4);
 	color: var(--color-muted);
-	font-size: 0.85rem;
+	font-size: 0.82rem;
 }
 
 .site-footer p {
@@ -94,81 +156,114 @@ svg {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+	gap: var(--space-2);
 	min-height: 2.75rem;
-	border: 1px solid transparent;
-	border-radius: var(--radius-pill);
-	padding: 0.65rem 1.15rem;
-	font: inherit;
-	font-weight: 700;
-	line-height: 1.2;
+	border: 2px solid var(--gruv-bg-hard);
+	border-radius: var(--radius-sm);
+	padding: 0.55rem 1.15rem;
+	font-family: var(--font-display);
+	font-size: 0.88rem;
+	font-weight: 400;
+	letter-spacing: 0.02em;
+	line-height: 1.25;
 	text-align: center;
 	text-decoration: none;
+	white-space: nowrap;
 	cursor: pointer;
+	box-shadow: var(--shadow-button);
 	transition:
-		background 150ms ease,
-		border-color 150ms ease,
-		box-shadow 150ms ease,
-		transform 150ms ease;
+		transform 120ms cubic-bezier(0.22, 1, 0.36, 1),
+		box-shadow 120ms cubic-bezier(0.22, 1, 0.36, 1),
+		background-color 120ms ease,
+		border-color 120ms ease,
+		color 120ms ease;
 }
 
-.button:hover {
-	transform: translateY(-1px);
+.button:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 5px 0 #141617;
+}
+
+.button:active:not(:disabled) {
+	transform: translateY(1px);
+	box-shadow: 0 1px 0 #141617;
 }
 
 .button:disabled {
-	cursor: wait;
-	opacity: 0.65;
-	transform: none;
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+
+.button-small {
+	min-height: 2.2rem;
+	padding: 0.35rem 0.8rem;
+	font-size: 0.8rem;
 }
 
 .button-primary {
-	background: var(--color-brand);
-	box-shadow: var(--shadow-button);
-	color: var(--color-surface);
+	border-color: var(--gruv-orange);
+	background: var(--gruv-orange);
+	color: var(--gruv-bg-hard);
 }
 
-.button-primary:hover {
-	background: #1f47c9;
+.button-primary:hover:not(:disabled) {
+	border-color: var(--gruv-yellow);
+	background: var(--gruv-yellow);
+	color: var(--gruv-bg-hard);
 }
 
 .button-secondary {
 	border-color: var(--color-border);
-	background: var(--color-surface);
-	color: var(--color-ink);
+	background: var(--gruv-bg1);
+	color: var(--color-heading);
 }
 
-.button-secondary:hover {
-	border-color: #c9cde0;
+.button-secondary:hover:not(:disabled) {
+	border-color: var(--gruv-orange);
+	background: var(--gruv-bg2);
+	color: var(--gruv-fg0);
+}
+
+.button-danger {
+	border-color: var(--gruv-red);
+	background: var(--gruv-red);
+	color: var(--gruv-bg-hard);
+}
+
+.button-danger:hover:not(:disabled) {
+	border-color: #ff6c5c;
+	background: #ff6c5c;
+	color: var(--gruv-bg-hard);
 }
 
 .nav-link {
 	color: var(--color-ink);
-	font-weight: 700;
+	font-weight: 400;
 	text-decoration: none;
 }
 
 .nav-link:hover {
-	color: var(--color-brand);
+	color: var(--gruv-orange);
 }
 
 .auth-page,
 .dashboard-page {
 	display: grid;
 	place-items: center;
-	padding-block: var(--space-7);
+	padding-block: var(--space-6);
 }
 
 .panel {
 	width: min(100%, 32rem);
-	border: 1px solid var(--color-border);
+	border: 2px solid var(--color-border);
 	border-radius: var(--radius-lg);
 	background: var(--color-surface);
-	padding: clamp(var(--space-5), 5vw, var(--space-7));
+	padding: clamp(var(--space-4), 4vw, var(--space-6));
 	box-shadow: var(--shadow-card);
 }
 
 .auth-card {
-	width: min(100%, 28rem);
+	width: min(100%, 29rem);
 }
 
 .dashboard-card {
@@ -176,16 +271,16 @@ svg {
 }
 
 .auth-eyebrow {
-	color: var(--color-brand);
-	font-size: 0.8rem;
-	font-weight: 800;
-	letter-spacing: 0.12em;
+	color: var(--gruv-orange);
+	font-size: 0.76rem;
+	font-weight: 400;
+	letter-spacing: 0.08em;
 	text-transform: uppercase;
 }
 
 .panel h1 {
-	margin-top: var(--space-3);
-	font-size: clamp(2rem, 6vw, 2.75rem);
+	margin-top: var(--space-2);
+	font-size: clamp(1.5rem, 3.8vw, 2.1rem);
 }
 
 .auth-intro {
@@ -205,26 +300,160 @@ svg {
 }
 
 .field label {
-	font-size: 0.88rem;
-	font-weight: 800;
+	color: var(--color-heading);
+	font-size: 0.85rem;
+	font-weight: 400;
 }
 
-.field input {
+.field input:not([type='checkbox']):not([type='radio']),
+.field textarea,
+.field select {
 	width: 100%;
-	border: 1px solid var(--color-border);
+	border: 2px solid var(--color-border);
 	border-radius: var(--radius-sm);
-	background: #fbfcff;
-	padding: 0.75rem 0.85rem;
-	color: var(--color-ink);
+	background: var(--gruv-bg-hard);
+	padding: 0.72rem 0.85rem;
+	color: var(--color-heading);
 	font: inherit;
+	transition:
+		border-color 140ms ease,
+		box-shadow 140ms ease;
 }
 
-.field input:focus {
-	border-color: var(--color-brand);
+.field input:not([type='checkbox']):not([type='radio'])::placeholder,
+.field textarea::placeholder {
+	color: var(--gruv-gray);
 }
 
-.field input[aria-invalid='true'] {
+.field input:not([type='checkbox']):not([type='radio']):focus,
+.field textarea:focus,
+.field select:focus {
+	border-color: var(--gruv-orange);
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(254, 128, 25, 0.2);
+}
+
+.field input:not([type='checkbox']):not([type='radio'])[aria-invalid='true'],
+.field textarea[aria-invalid='true'] {
 	border-color: var(--color-danger);
+}
+
+/* Gruvbox Custom Checkboxes & Radio Controls */
+input[type='checkbox'],
+input[type='radio'] {
+	-webkit-appearance: none;
+	appearance: none;
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.4rem;
+	height: 1.4rem;
+	margin: 0;
+	flex-shrink: 0;
+	border: 2px solid var(--gruv-bg4);
+	border-radius: 4px;
+	background-color: var(--gruv-bg-hard);
+	box-shadow: 0 2px 0 #141617;
+	cursor: pointer;
+	vertical-align: middle;
+	transition:
+		background-color 140ms ease,
+		border-color 140ms ease,
+		transform 120ms cubic-bezier(0.22, 1, 0.36, 1),
+		box-shadow 120ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+input[type='radio'] {
+	border-radius: 50%;
+}
+
+input[type='checkbox']::after {
+	content: '';
+	width: 0.85rem;
+	height: 0.85rem;
+	background-color: var(--gruv-bg-hard);
+	mask: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 8.5L6.5 12L13 4.5' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+		no-repeat center / contain;
+	-webkit-mask: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 8.5L6.5 12L13 4.5' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+		no-repeat center / contain;
+	transform: scale(0) rotate(-10deg);
+	transition: transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+input[type='radio']::after {
+	content: '';
+	width: 0.58rem;
+	height: 0.58rem;
+	border-radius: 50%;
+	transform: scale(0);
+	transition: transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+	background-color: var(--gruv-bg-hard);
+}
+
+input[type='checkbox']:hover:not(:disabled),
+input[type='radio']:hover:not(:disabled) {
+	border-color: var(--gruv-orange);
+	background-color: var(--gruv-bg0);
+	transform: translateY(-1px);
+	box-shadow: 0 3px 0 #141617;
+}
+
+input[type='checkbox']:active:not(:disabled),
+input[type='radio']:active:not(:disabled) {
+	transform: translateY(1px);
+	box-shadow: 0 1px 0 #141617;
+}
+
+input[type='checkbox']:checked,
+input[type='radio']:checked {
+	border-color: var(--gruv-green);
+	background-color: var(--gruv-green);
+}
+
+input[type='checkbox']:checked:hover:not(:disabled),
+input[type='radio']:checked:hover:not(:disabled) {
+	border-color: var(--gruv-yellow);
+	background-color: var(--gruv-yellow);
+}
+
+input[type='checkbox']:checked::after {
+	transform: scale(1) rotate(0deg);
+}
+
+input[type='radio']:checked::after {
+	transform: scale(1);
+}
+
+input[type='checkbox']:focus-visible,
+input[type='radio']:focus-visible {
+	outline: none;
+	border-color: var(--gruv-yellow);
+	box-shadow:
+		0 2px 0 #141617,
+		0 0 0 3px rgba(250, 189, 47, 0.35);
+}
+
+input[type='checkbox']:disabled,
+input[type='radio']:disabled {
+	cursor: not-allowed;
+	opacity: 0.45;
+}
+
+/* Reusable Gruvbox Checkbox Wrapper */
+.checkbox-field {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.65rem;
+	cursor: pointer;
+	user-select: none;
+	font-size: 0.88rem;
+	color: var(--color-ink);
+	transition: color 120ms ease;
+}
+
+.checkbox-field:hover {
+	color: var(--gruv-fg0);
 }
 
 .field-hint {
@@ -235,17 +464,15 @@ svg {
 .field-error {
 	color: var(--color-danger);
 	font-size: 0.8rem;
-	font-weight: 600;
 }
 
 .form-error {
-	border: 1px solid #ffd2cc;
+	border: 2px solid var(--gruv-red);
 	border-radius: var(--radius-sm);
 	background: var(--color-danger-tint);
 	padding: var(--space-3);
-	color: var(--color-danger);
-	font-size: 0.88rem;
-	font-weight: 600;
+	color: var(--gruv-fg0);
+	font-size: 0.86rem;
 }
 
 .auth-submit {
@@ -256,22 +483,18 @@ svg {
 .auth-switch {
 	margin-top: var(--space-5);
 	color: var(--color-muted);
-	font-size: 0.9rem;
+	font-size: 0.88rem;
 	text-align: center;
-}
-
-.auth-switch a {
-	font-weight: 700;
 }
 
 .dashboard-note {
 	margin-top: var(--space-5);
-	border-left: 4px solid var(--color-sunshine);
+	border-left: 4px solid var(--gruv-yellow);
 	border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 	background: var(--color-tint);
 	padding: var(--space-4);
 	color: var(--color-muted);
-	font-size: 0.92rem;
+	font-size: 0.9rem;
 }
 
 .dashboard-actions {
@@ -281,12 +504,46 @@ svg {
 	margin-top: var(--space-5);
 }
 
-@media (max-width: 40rem) {
+/* Gruvbox Loading Spinner & Dots */
+.gruv-spinner {
+	display: inline-block;
+	width: 1.05rem;
+	height: 1.05rem;
+	border: 2.5px solid currentColor;
+	border-right-color: transparent;
+	border-radius: 50%;
+	animation: gruv-spin 0.65s linear infinite;
+	flex-shrink: 0;
+}
+
+@keyframes gruv-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (max-width: 48rem) {
+	body {
+		font-size: 0.92rem;
+	}
+
 	.page {
 		width: min(100% - 1.25rem, var(--page-max));
+		padding-block: var(--space-3);
 	}
 
 	.panel {
-		padding: var(--space-5);
+		padding: var(--space-4);
+	}
+}
+
+@media (max-width: 32rem) {
+	.page {
+		width: calc(100% - 1rem);
+	}
+
+	.button {
+		padding: 0.5rem 0.9rem;
+		font-size: 0.82rem;
 	}
 }

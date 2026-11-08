@@ -49,7 +49,7 @@
 </script>
 
 <svelte:head>
-	<title>Create your account — {BRAND.name}</title>
+	<title>Create your account · {BRAND.name}</title>
 	<meta
 		name="description"
 		content="Create a Quizky teacher account to build quizzes and host games."
@@ -128,6 +128,9 @@
 				</div>
 
 				<button class="button button-primary auth-submit" type="submit" disabled={pending}>
+					{#if pending}
+						<span class="gruv-spinner" aria-hidden="true"></span>
+					{/if}
 					{pending ? 'Creating account…' : 'Create account'}
 				</button>
 			</form>

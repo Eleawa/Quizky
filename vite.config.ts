@@ -167,6 +167,7 @@ export default defineConfig({
 		})
 	],
 	test: {
+		hookTimeout: 30_000,
 		expect: { requireAssertions: true },
 		projects: [
 			{

@@ -82,7 +82,7 @@ export function buildLeaderboard(
 		entry.totalResponseTimeMs += Math.max(0, answer.responseTimeMs);
 	}
 
-	const sorted = [...participants].sort((a, b) => {
+	const sorted = participants.toSorted((a, b) => {
 		const statsA = totals.get(a.id) ?? {
 			totalScore: 0,
 			correctCount: 0,
@@ -177,8 +177,8 @@ export function buildQuestionResults(
 		answerByParticipant.set(answer.participantId, answer);
 	}
 
-	const optionStats: TeacherOptionStatistic[] = [...question.options]
-		.sort((a, b) => a.position - b.position)
+	const optionStats: TeacherOptionStatistic[] = question.options
+		.toSorted((a, b) => a.position - b.position)
 		.map((option) => ({
 			optionId: option.id,
 			text: option.text,

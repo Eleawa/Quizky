@@ -85,6 +85,26 @@ export type EndGameTransitionResult =
 	  }
 	| TransitionFailure;
 
+export type SkipTransitionResult =
+	| {
+			ok: true;
+			action: 'question_skipped';
+			skippedQuestion: SessionSnapshotQuestion;
+			openedQuestion: SessionSnapshotQuestion;
+			completedGame: false;
+			nextState: EngineRoomState;
+			alarmAtMs: number;
+	  }
+	| {
+			ok: true;
+			action: 'game_completed';
+			skippedQuestion: SessionSnapshotQuestion;
+			completedGame: true;
+			nextState: EngineRoomState;
+			alarmAtMs: null;
+	  }
+	| TransitionFailure;
+
 export function transitionStartGame(
 	state: EngineRoomState,
 	questions: readonly SessionSnapshotQuestion[],
@@ -385,5 +405,76 @@ export function transitionEndGame(
 		ok: false,
 		code: 'invalid_state',
 		message: 'This session has already ended.'
+	};
+}
+
+export function transitionSkipQuestion(
+	state: EngineRoomState,
+	questions: readonly SessionSnapshotQuestion[],
+	nowMs: number
+): SkipTransitionResult {
+	if (state.status !== 'in_progress') {
+		return {
+			ok: false,
+			code: 'invalid_state',
+			message: 'Session is not currently in progress.'
+		};
+	}
+
+	const currentQuestion = questions[state.currentQuestionIndex];
+	if (!currentQuestion) {
+		return {
+			ok: false,
+			code: 'invalid_state',
+			message: 'Active question could not be found.'
+		};
+	}
+
+	const isLastQuestion = state.currentQuestionIndex >= questions.length - 1;
+	const nowIso = new Date(nowMs).toISOString();
+
+	if (isLastQuestion) {
+		return {
+			ok: true,
+			action: 'game_completed',
+			skippedQuestion: currentQuestion,
+			completedGame: true,
+			alarmAtMs: null,
+			nextState: {
+				...state,
+				status: 'completed',
+				questionPhase: 'closed',
+				questionDeadlineAt: null,
+				endedAt: nowIso
+			}
+		};
+	}
+
+	const nextIndex = state.currentQuestionIndex + 1;
+	const nextQuestion = questions[nextIndex];
+	if (!nextQuestion) {
+		return {
+			ok: false,
+			code: 'invalid_state',
+			message: 'Next question could not be found.'
+		};
+	}
+
+	const nextDeadlineMs = nowMs + nextQuestion.timeLimitSeconds * 1000;
+	return {
+		ok: true,
+		action: 'question_skipped',
+		skippedQuestion: currentQuestion,
+		openedQuestion: nextQuestion,
+		completedGame: false,
+		alarmAtMs: nextDeadlineMs,
+		nextState: {
+			...state,
+			status: 'in_progress',
+			questionPhase: 'open',
+			currentQuestionIndex: nextIndex,
+			questionOpenedAt: nowIso,
+			questionDeadlineAt: new Date(nextDeadlineMs).toISOString()
+		}
 	};
 }

@@ -17,7 +17,8 @@
 		"check": "pnpm run gen && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && pnpm run check:room",
 		"check:room": "tsc --noEmit -p workers/session-room/tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"lint": "prettier --check . && eslint .",
+		"lint": "prettier --check . && oxlint --deny-warnings && eslint .",
+		"lint:ox": "oxlint --deny-warnings",
 		"format": "prettier --write .",
 		"test": "vitest run",
 		"test:unit": "vitest",
@@ -44,6 +45,7 @@
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.19.0",
 		"globals": "^17.6.0",
+		"oxlint": "^1.92.0",
 		"prettier": "^3.8.3",
 		"prettier-plugin-svelte": "^4.1.0",
 		"svelte": "^5.57.1",
@@ -56,7 +58,11 @@
 	},
 	"dependencies": {
 		"@noble/hashes": "^2.4.0",
+		"bootstrap": "^5.3.8",
 		"drizzle-orm": "^0.45.4",
+		"energy-icons": "^1.6.0",
+		"gsap": "^3.15.1",
+		"highlight.js": "^11.12.0",
 		"zod": "^4.6.7"
 	},
 	"imports": {

@@ -1,0 +1,1780 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+const THEME_DATA = [
+	{
+		family: 'Gruvbox',
+		dark: {
+			id: 'gruvbox',
+			name: 'Gruvbox Dark',
+			type: 'dark',
+			primary: '#fe8019',
+			bg: '#1d2021',
+			surface: '#282828',
+			border: '#504945',
+			text: '#ebdbb2',
+			heading: '#fbf1c7',
+			accent: '#fabd2f',
+			green: '#b8bb26',
+			yellow: '#fabd2f',
+			red: '#fb4934',
+			blue: '#83a598',
+			purple: '#d3869b',
+			aqua: '#8ec07c',
+			orange: '#fe8019',
+			muted: '#bdae93'
+		},
+		light: {
+			id: 'gruvbox-light',
+			name: 'Gruvbox Light',
+			type: 'light',
+			primary: '#af3a03',
+			bg: '#fbf1c7',
+			surface: '#f2e5bc',
+			border: '#d5c4a1',
+			text: '#3c3836',
+			heading: '#282828',
+			accent: '#b57614',
+			green: '#79740e',
+			yellow: '#b57614',
+			red: '#9d0006',
+			blue: '#076678',
+			purple: '#8f3f71',
+			aqua: '#427b58',
+			orange: '#af3a03',
+			muted: '#7c6f64'
+		}
+	},
+	{
+		family: 'One Dark Pro',
+		dark: {
+			id: 'one-dark-pro',
+			name: 'One Dark Pro',
+			type: 'dark',
+			primary: '#61afef',
+			bg: '#21252b',
+			surface: '#282c34',
+			border: '#3e4451',
+			text: '#abb2bf',
+			heading: '#e5c07b',
+			accent: '#98c379',
+			green: '#98c379',
+			yellow: '#e5c07b',
+			red: '#e06c75',
+			blue: '#61afef',
+			purple: '#c678dd',
+			aqua: '#56b6c2',
+			orange: '#d19a66',
+			muted: '#7f848e'
+		},
+		light: {
+			id: 'one-light',
+			name: 'One Light',
+			type: 'light',
+			primary: '#4078f2',
+			bg: '#fafafa',
+			surface: '#ffffff',
+			border: '#e5e5e6',
+			text: '#383a42',
+			heading: '#202227',
+			accent: '#50a14f',
+			green: '#50a14f',
+			yellow: '#c18401',
+			red: '#e45649',
+			blue: '#4078f2',
+			purple: '#a626a4',
+			aqua: '#0184bc',
+			orange: '#986801',
+			muted: '#a0a1a7'
+		}
+	},
+	{
+		family: 'Dracula',
+		dark: {
+			id: 'dracula-official',
+			name: 'Dracula Official',
+			type: 'dark',
+			primary: '#bd93f9',
+			bg: '#1e1f29',
+			surface: '#282a36',
+			border: '#44475a',
+			text: '#f8f8f2',
+			heading: '#ff79c6',
+			accent: '#50fa7b',
+			green: '#50fa7b',
+			yellow: '#f1fa8c',
+			red: '#ff5555',
+			blue: '#8be9fd',
+			purple: '#bd93f9',
+			aqua: '#8be9fd',
+			orange: '#ffb86c',
+			muted: '#6272a4'
+		},
+		light: {
+			id: 'dracula-light',
+			name: 'Dracula Light',
+			type: 'light',
+			primary: '#7c3aed',
+			bg: '#f8f8f2',
+			surface: '#ffffff',
+			border: '#e2e8f0',
+			text: '#282a36',
+			heading: '#6272a4',
+			accent: '#059669',
+			green: '#059669',
+			yellow: '#d97706',
+			red: '#dc2626',
+			blue: '#2563eb',
+			purple: '#7c3aed',
+			aqua: '#0891b2',
+			orange: '#ea580c',
+			muted: '#64748b'
+		}
+	},
+	{
+		family: 'Tokyo Night',
+		dark: {
+			id: 'tokyo-night',
+			name: 'Tokyo Night',
+			type: 'dark',
+			primary: '#7aa2f7',
+			bg: '#16161e',
+			surface: '#1a1b26',
+			border: '#414868',
+			text: '#c0caf5',
+			heading: '#7aa2f7',
+			accent: '#9ece6a',
+			green: '#9ece6a',
+			yellow: '#e0af68',
+			red: '#f7768e',
+			blue: '#7aa2f7',
+			purple: '#bb9af7',
+			aqua: '#7dcfff',
+			orange: '#ff9e64',
+			muted: '#565f89'
+		},
+		light: {
+			id: 'tokyo-night-light',
+			name: 'Tokyo Night Light',
+			type: 'light',
+			primary: '#34548a',
+			bg: '#e1e2e7',
+			surface: '#e9e9ed',
+			border: '#c4c8da',
+			text: '#3760bf',
+			heading: '#2e7de9',
+			accent: '#587539',
+			green: '#587539',
+			yellow: '#8c6c3e',
+			red: '#f52a65',
+			blue: '#2e7de9',
+			purple: '#9854f1',
+			aqua: '#007197',
+			orange: '#b15c00',
+			muted: '#8990b3'
+		}
+	},
+	{
+		family: 'Catppuccin',
+		dark: {
+			id: 'catppuccin',
+			name: 'Catppuccin Mocha',
+			type: 'dark',
+			primary: '#cba6f7',
+			bg: '#181825',
+			surface: '#1e1e2e',
+			border: '#45475a',
+			text: '#cdd6f4',
+			heading: '#cba6f7',
+			accent: '#a6e3a1',
+			green: '#a6e3a1',
+			yellow: '#f9e2af',
+			red: '#f38ba8',
+			blue: '#89b4fa',
+			purple: '#cba6f7',
+			aqua: '#94e2d5',
+			orange: '#fab387',
+			muted: '#6c7086'
+		},
+		light: {
+			id: 'catppuccin-latte',
+			name: 'Catppuccin Latte',
+			type: 'light',
+			primary: '#1e66f5',
+			bg: '#eff1f5',
+			surface: '#e6e9ef',
+			border: '#ccd0da',
+			text: '#4c4f69',
+			heading: '#1e66f5',
+			accent: '#40a02b',
+			green: '#40a02b',
+			yellow: '#df8e1d',
+			red: '#d20f39',
+			blue: '#1e66f5',
+			purple: '#8839ef',
+			aqua: '#179299',
+			orange: '#fe640b',
+			muted: '#7c7f93'
+		}
+	},
+	{
+		family: 'GitHub',
+		dark: {
+			id: 'github-dark',
+			name: 'GitHub Dark',
+			type: 'dark',
+			primary: '#58a6ff',
+			bg: '#0d1117',
+			surface: '#161b22',
+			border: '#30363d',
+			text: '#e6edf3',
+			heading: '#58a6ff',
+			accent: '#238636',
+			green: '#3fb950',
+			yellow: '#d29922',
+			red: '#f85149',
+			blue: '#58a6ff',
+			purple: '#bc8cff',
+			aqua: '#39c5cf',
+			orange: '#f0883e',
+			muted: '#8b949e'
+		},
+		light: {
+			id: 'github-light',
+			name: 'GitHub Light',
+			type: 'light',
+			primary: '#0969da',
+			bg: '#f6f8fa',
+			surface: '#ffffff',
+			border: '#d0d7de',
+			text: '#24292f',
+			heading: '#1f2328',
+			accent: '#1a7f37',
+			green: '#1a7f37',
+			yellow: '#9a6700',
+			red: '#cf222e',
+			blue: '#0969da',
+			purple: '#8250df',
+			aqua: '#0598bc',
+			orange: '#bc4c00',
+			muted: '#57606a'
+		}
+	},
+	{
+		family: "SynthWave '84",
+		dark: {
+			id: 'synthwave-84',
+			name: "SynthWave '84 Dark",
+			type: 'dark',
+			primary: '#ff7edb',
+			bg: '#241b2f',
+			surface: '#2a2139',
+			border: '#463465',
+			text: '#f92aad',
+			heading: '#fede5d',
+			accent: '#36f9f6',
+			green: '#72f1b8',
+			yellow: '#fede5d',
+			red: '#fe4450',
+			blue: '#03edf9',
+			purple: '#b072d1',
+			aqua: '#36f9f6',
+			orange: '#f97e72',
+			muted: '#848bbd'
+		},
+		light: {
+			id: 'synthwave-84-light',
+			name: "SynthWave '84 Light",
+			type: 'light',
+			primary: '#ff4081',
+			bg: '#f9f6fa',
+			surface: '#ffffff',
+			border: '#e6d6ea',
+			text: '#362a46',
+			heading: '#61226b',
+			accent: '#00b4d8',
+			green: '#00b894',
+			yellow: '#f39c12',
+			red: '#e74c3c',
+			blue: '#0984e3',
+			purple: '#6c5ce7',
+			aqua: '#00cec9',
+			orange: '#e17055',
+			muted: '#8f7b99'
+		}
+	},
+	{
+		family: 'Night Owl',
+		dark: {
+			id: 'night-owl',
+			name: 'Night Owl Dark',
+			type: 'dark',
+			primary: '#82aaff',
+			bg: '#011627',
+			surface: '#0b253a',
+			border: '#1d3b53',
+			text: '#d6deeb',
+			heading: '#addb67',
+			accent: '#ecc48d',
+			green: '#22da6e',
+			yellow: '#ecc48d',
+			red: '#ef5350',
+			blue: '#82aaff',
+			purple: '#c792ea',
+			aqua: '#21c7a8',
+			orange: '#f78c6c',
+			muted: '#5f7e97'
+		},
+		light: {
+			id: 'light-owl',
+			name: 'Light Owl',
+			type: 'light',
+			primary: '#0c969b',
+			bg: '#fbfbfb',
+			surface: '#f0f0f0',
+			border: '#d9d9d9',
+			text: '#403f53',
+			heading: '#111111',
+			accent: '#2aa298',
+			green: '#2aa298',
+			yellow: '#c96b16',
+			red: '#de3d3b',
+			blue: '#4876d6',
+			purple: '#994cc3',
+			aqua: '#0c969b',
+			orange: '#ea652a',
+			muted: '#908e8e'
+		}
+	},
+	{
+		family: 'Shades of Purple',
+		dark: {
+			id: 'shades-of-purple',
+			name: 'Shades of Purple Dark',
+			type: 'dark',
+			primary: '#b362ff',
+			bg: '#1e1e3f',
+			surface: '#2d2b55',
+			border: '#433f78',
+			text: '#ffffff',
+			heading: '#fad000',
+			accent: '#a599e9',
+			green: '#a8ff60',
+			yellow: '#fad000',
+			red: '#ec3a37',
+			blue: '#00e8c6',
+			purple: '#b362ff',
+			aqua: '#79dae8',
+			orange: '#ff9d00',
+			muted: '#807aa3'
+		},
+		light: {
+			id: 'shades-of-purple-light',
+			name: 'Shades of Purple Light',
+			type: 'light',
+			primary: '#7952b3',
+			bg: '#faf5ff',
+			surface: '#ffffff',
+			border: '#e9d8fd',
+			text: '#322659',
+			heading: '#2d3748',
+			accent: '#ffb454',
+			green: '#38a169',
+			yellow: '#d69e2e',
+			red: '#e53e3e',
+			blue: '#3182ce',
+			purple: '#805ad5',
+			aqua: '#319795',
+			orange: '#dd6b20',
+			muted: '#718096'
+		}
+	},
+	{
+		family: 'Monokai Pro',
+		dark: {
+			id: 'monokai-pro',
+			name: 'Monokai Pro Dark',
+			type: 'dark',
+			primary: '#ffd866',
+			bg: '#221f22',
+			surface: '#2d2a2e',
+			border: '#403e41',
+			text: '#fcfcfa',
+			heading: '#ffd866',
+			accent: '#a9dc76',
+			green: '#a9dc76',
+			yellow: '#ffd866',
+			red: '#ff6188',
+			blue: '#78dce8',
+			purple: '#ab9df2',
+			aqua: '#78dce8',
+			orange: '#fc9867',
+			muted: '#727072'
+		},
+		light: {
+			id: 'monokai-pro-light',
+			name: 'Monokai Pro Light',
+			type: 'light',
+			primary: '#ff6188',
+			bg: '#fafafa',
+			surface: '#f1f1f1',
+			border: '#e2e2e2',
+			text: '#363537',
+			heading: '#221f22',
+			accent: '#a9dc76',
+			green: '#78b33b',
+			yellow: '#d99b26',
+			red: '#e94560',
+			blue: '#3b82f6',
+			purple: '#ab9df2',
+			aqua: '#78e8c6',
+			orange: '#fc9867',
+			muted: '#939293'
+		}
+	},
+	{
+		family: 'Ayu',
+		dark: {
+			id: 'ayu-dark',
+			name: 'Ayu Dark',
+			type: 'dark',
+			primary: '#ffb454',
+			bg: '#0b0e14',
+			surface: '#0f141c',
+			border: '#1d2433',
+			text: '#b3b1ad',
+			heading: '#e6b450',
+			accent: '#aad94c',
+			green: '#c2d94c',
+			yellow: '#e6b450',
+			red: '#d95757',
+			blue: '#59c2ff',
+			purple: '#d2a6ff',
+			aqua: '#95e6cb',
+			orange: '#ff8f40',
+			muted: '#626a73'
+		},
+		light: {
+			id: 'ayu-light',
+			name: 'Ayu Light',
+			type: 'light',
+			primary: '#ff9940',
+			bg: '#f8f9fa',
+			surface: '#ffffff',
+			border: '#e1e3e5',
+			text: '#575f66',
+			heading: '#1a1f29',
+			accent: '#86b300',
+			green: '#86b300',
+			yellow: '#f2ae49',
+			red: '#f07171',
+			blue: '#36a3d9',
+			purple: '#a37acc',
+			aqua: '#4cbf99',
+			orange: '#fa8d3e',
+			muted: '#abb0b6'
+		}
+	},
+	{
+		family: 'Cobalt2',
+		dark: {
+			id: 'cobalt2',
+			name: 'Cobalt2 Dark',
+			type: 'dark',
+			primary: '#ffc600',
+			bg: '#15232d',
+			surface: '#193549',
+			border: '#0d3a58',
+			text: '#e1efff',
+			heading: '#ffc600',
+			accent: '#0088ff',
+			green: '#3dd5ff',
+			yellow: '#ffc600',
+			red: '#ff0033',
+			blue: '#0088ff',
+			purple: '#fb94ff',
+			aqua: '#00d8ff',
+			orange: '#ff9d00',
+			muted: '#728997'
+		},
+		light: {
+			id: 'cobalt2-light',
+			name: 'Cobalt2 Light',
+			type: 'light',
+			primary: '#ffc600',
+			bg: '#f0f4f8',
+			surface: '#ffffff',
+			border: '#d9e2ec',
+			text: '#102a43',
+			heading: '#002240',
+			accent: '#0088ff',
+			green: '#38b2ac',
+			yellow: '#d69e2e',
+			red: '#e53e3e',
+			blue: '#0088ff',
+			purple: '#ff9d00',
+			aqua: '#00bcd4',
+			orange: '#ff6600',
+			muted: '#627d98'
+		}
+	},
+	{
+		family: 'Nord',
+		dark: {
+			id: 'nord',
+			name: 'Nord Dark',
+			type: 'dark',
+			primary: '#88c0d0',
+			bg: '#242933',
+			surface: '#2e3440',
+			border: '#3b4252',
+			text: '#eceff4',
+			heading: '#88c0d0',
+			accent: '#a3be8c',
+			green: '#a3be8c',
+			yellow: '#ebcb8b',
+			red: '#bf616a',
+			blue: '#81a1c1',
+			purple: '#b48ead',
+			aqua: '#8fbcbb',
+			orange: '#d08770',
+			muted: '#4c566a'
+		},
+		light: {
+			id: 'nord-light',
+			name: 'Nord Light',
+			type: 'light',
+			primary: '#5e81ac',
+			bg: '#eceff4',
+			surface: '#e5e9f0',
+			border: '#d8dee9',
+			text: '#2e3440',
+			heading: '#4c566a',
+			accent: '#88c0d0',
+			green: '#a3be8c',
+			yellow: '#ebcb8b',
+			red: '#bf616a',
+			blue: '#81a1c1',
+			purple: '#b48ead',
+			aqua: '#8fbcbb',
+			orange: '#d08770',
+			muted: '#768297'
+		}
+	},
+	{
+		family: 'Panda Theme',
+		dark: {
+			id: 'panda-theme',
+			name: 'Panda Theme Dark',
+			type: 'dark',
+			primary: '#ff75b5',
+			bg: '#242529',
+			surface: '#292a2b',
+			border: '#373b41',
+			text: '#e6e6e6',
+			heading: '#ff75b5',
+			accent: '#19b29e',
+			green: '#19b29e',
+			yellow: '#ffb86c',
+			red: '#ff2c6d',
+			blue: '#45a9f9',
+			purple: '#b084eb',
+			aqua: '#19b29e',
+			orange: '#ff995e',
+			muted: '#676b79'
+		},
+		light: {
+			id: 'panda-light',
+			name: 'Panda Light',
+			type: 'light',
+			primary: '#19b29e',
+			bg: '#f9fafb',
+			surface: '#ffffff',
+			border: '#e5e7eb',
+			text: '#292a2b',
+			heading: '#19b29e',
+			accent: '#ff75b5',
+			green: '#19b29e',
+			yellow: '#ffb86c',
+			red: '#ff2c6d',
+			blue: '#45a9f9',
+			purple: '#b084eb',
+			aqua: '#19b29e',
+			orange: '#ff995e',
+			muted: '#676b79'
+		}
+	},
+	{
+		family: 'Andromeda',
+		dark: {
+			id: 'andromeda',
+			name: 'Andromeda Dark',
+			type: 'dark',
+			primary: '#00e8c6',
+			bg: '#1e2227',
+			surface: '#262a33',
+			border: '#3a404d',
+			text: '#d5ced9',
+			heading: '#00e8c6',
+			accent: '#ffe600',
+			green: '#96e072',
+			yellow: '#ffe600',
+			red: '#ee5d43',
+			blue: '#00e8c6',
+			purple: '#c74ded',
+			aqua: '#00e8c6',
+			orange: '#f39c12',
+			muted: '#746f77'
+		},
+		light: {
+			id: 'andromeda-light',
+			name: 'Andromeda Light',
+			type: 'light',
+			primary: '#00e8c6',
+			bg: '#f8f9fa',
+			surface: '#ffffff',
+			border: '#e2e8f0',
+			text: '#2d3748',
+			heading: '#1a202c',
+			accent: '#f92672',
+			green: '#00d084',
+			yellow: '#ffe600',
+			red: '#f92672',
+			blue: '#00e8c6',
+			purple: '#c74ded',
+			aqua: '#00e8c6',
+			orange: '#f39c12',
+			muted: '#718096'
+		}
+	},
+	{
+		family: 'Winter is Coming',
+		dark: {
+			id: 'winter-is-coming',
+			name: 'Winter is Coming Dark',
+			type: 'dark',
+			primary: '#57b6ca',
+			bg: '#011627',
+			surface: '#0b253a',
+			border: '#1d3b53',
+			text: '#cbe3e7',
+			heading: '#57b6ca',
+			accent: '#bce48d',
+			green: '#82e0aa',
+			yellow: '#ffe585',
+			red: '#f48771',
+			blue: '#57b6ca',
+			purple: '#d199ff',
+			aqua: '#7fdbca',
+			orange: '#ff9d00',
+			muted: '#5f7e97'
+		},
+		light: {
+			id: 'winter-is-coming-light',
+			name: 'Winter is Coming Light',
+			type: 'light',
+			primary: '#035a96',
+			bg: '#f5f8fc',
+			surface: '#ffffff',
+			border: '#dae3ef',
+			text: '#233748',
+			heading: '#035a96',
+			accent: '#2e8b57',
+			green: '#2e8b57',
+			yellow: '#d48800',
+			red: '#b81414',
+			blue: '#035a96',
+			purple: '#7b1fa2',
+			aqua: '#00838f',
+			orange: '#c75a00',
+			muted: '#6f8295'
+		}
+	},
+	{
+		family: 'Palenight',
+		dark: {
+			id: 'palenight',
+			name: 'Palenight Dark',
+			type: 'dark',
+			primary: '#82aaff',
+			bg: '#202334',
+			surface: '#292d3e',
+			border: '#383d54',
+			text: '#a6accd',
+			heading: '#ffcb6b',
+			accent: '#c792ea',
+			green: '#c3e88d',
+			yellow: '#ffcb6b',
+			red: '#ff5370',
+			blue: '#82aaff',
+			purple: '#c792ea',
+			aqua: '#89ddff',
+			orange: '#f78c6c',
+			muted: '#676e95'
+		},
+		light: {
+			id: 'palenight-light',
+			name: 'Palenight Light',
+			type: 'light',
+			primary: '#82aaff',
+			bg: '#f6f7fb',
+			surface: '#ffffff',
+			border: '#e1e4ee',
+			text: '#373b52',
+			heading: '#292d3e',
+			accent: '#c792ea',
+			green: '#49b37c',
+			yellow: '#ffcb6b',
+			red: '#ff5370',
+			blue: '#82aaff',
+			purple: '#c792ea',
+			aqua: '#89ddff',
+			orange: '#f78c6c',
+			muted: '#7982a9'
+		}
+	},
+	{
+		family: 'Noctis',
+		dark: {
+			id: 'noctis',
+			name: 'Noctis Dark',
+			type: 'dark',
+			primary: '#49e9a6',
+			bg: '#162025',
+			surface: '#1b2930',
+			border: '#2b3e47',
+			text: '#c5cdd3',
+			heading: '#49e9a6',
+			accent: '#df8c63',
+			green: '#49e9a6',
+			yellow: '#ecc48d',
+			red: '#d55b54',
+			blue: '#49bee9',
+			purple: '#c792ea',
+			aqua: '#49e9c5',
+			orange: '#df8c63',
+			muted: '#5b7482'
+		},
+		light: {
+			id: 'noctis-light',
+			name: 'Noctis Light',
+			type: 'light',
+			primary: '#009485',
+			bg: '#f9f9f9',
+			surface: '#ffffff',
+			border: '#e4e4e4',
+			text: '#3c3836',
+			heading: '#282828',
+			accent: '#e65100',
+			green: '#008b74',
+			yellow: '#c27d00',
+			red: '#c83232',
+			blue: '#1e73be',
+			purple: '#8e44ad',
+			aqua: '#00a896',
+			orange: '#e65100',
+			muted: '#757575'
+		}
+	},
+	{
+		family: 'Horizon Theme',
+		dark: {
+			id: 'horizon-theme',
+			name: 'Horizon Dark',
+			type: 'dark',
+			primary: '#e95678',
+			bg: '#1a1c23',
+			surface: '#1c1e26',
+			border: '#2e303e',
+			text: '#d5d8da',
+			heading: '#e95678',
+			accent: '#fab795',
+			green: '#29d398',
+			yellow: '#fac29a',
+			red: '#e95678',
+			blue: '#26bbd9',
+			purple: '#ee64ac',
+			aqua: '#59e1e3',
+			orange: '#fab795',
+			muted: '#6c6f93'
+		},
+		light: {
+			id: 'horizon-light',
+			name: 'Horizon Light',
+			type: 'light',
+			primary: '#e95678',
+			bg: '#fdf6f0',
+			surface: '#ffffff',
+			border: '#f0dfd5',
+			text: '#403838',
+			heading: '#2e2525',
+			accent: '#fab795',
+			green: '#29d398',
+			yellow: '#fac29a',
+			red: '#e95678',
+			blue: '#26bbd9',
+			purple: '#ee64ac',
+			aqua: '#59e1e3',
+			orange: '#f09383',
+			muted: '#8a7d7d'
+		}
+	},
+	{
+		family: 'Bluloco',
+		dark: {
+			id: 'bluloco-dark',
+			name: 'Bluloco Dark',
+			type: 'dark',
+			primary: '#3691ff',
+			bg: '#1e2029',
+			surface: '#282c34',
+			border: '#3a3f4b',
+			text: '#abb2bf',
+			heading: '#3fc56b',
+			accent: '#ff936a',
+			green: '#3fc56b',
+			yellow: '#f9c859',
+			red: '#ff6480',
+			blue: '#3691ff',
+			purple: '#ce9887',
+			aqua: '#10b1fe',
+			orange: '#ff936a',
+			muted: '#676b79'
+		},
+		light: {
+			id: 'bluloco-light',
+			name: 'Bluloco Light',
+			type: 'light',
+			primary: '#005cc5',
+			bg: '#f9f9f9',
+			surface: '#ffffff',
+			border: '#e0e0e0',
+			text: '#383a42',
+			heading: '#005cc5',
+			accent: '#22863a',
+			green: '#22863a',
+			yellow: '#e36209',
+			red: '#d73a49',
+			blue: '#005cc5',
+			purple: '#6f42c1',
+			aqua: '#0086b3',
+			orange: '#e36209',
+			muted: '#6a737d'
+		}
+	},
+	{
+		family: 'Rose Pine',
+		dark: {
+			id: 'rose-pine',
+			name: 'Rose Pine Dark',
+			type: 'dark',
+			primary: '#ebbcba',
+			bg: '#191724',
+			surface: '#1f1d2e',
+			border: '#26233a',
+			text: '#e0def4',
+			heading: '#ebbcba',
+			accent: '#f6c177',
+			green: '#9ccfd8',
+			yellow: '#f6c177',
+			red: '#eb6f92',
+			blue: '#31748f',
+			purple: '#c4a7e7',
+			aqua: '#9ccfd8',
+			orange: '#ea9a97',
+			muted: '#6e6a86'
+		},
+		light: {
+			id: 'rose-pine-dawn',
+			name: 'Rose Pine Dawn',
+			type: 'light',
+			primary: '#d7827e',
+			bg: '#faf4ed',
+			surface: '#fffaf3',
+			border: '#f2e9de',
+			text: '#575279',
+			heading: '#d7827e',
+			accent: '#ea9d34',
+			green: '#56949f',
+			yellow: '#ea9d34',
+			red: '#b4637a',
+			blue: '#286983',
+			purple: '#907aa9',
+			aqua: '#56949f',
+			orange: '#d7827e',
+			muted: '#9893a5'
+		}
+	},
+	{
+		family: 'Kanagawa',
+		dark: {
+			id: 'kanagawa',
+			name: 'Kanagawa Wave',
+			type: 'dark',
+			primary: '#7e9cd8',
+			bg: '#181820',
+			surface: '#1f1f28',
+			border: '#2a2a37',
+			text: '#dcd7ba',
+			heading: '#98bb6c',
+			accent: '#ffa066',
+			green: '#76946a',
+			yellow: '#e6c384',
+			red: '#c34043',
+			blue: '#7e9cd8',
+			purple: '#957fb8',
+			aqua: '#7aa89f',
+			orange: '#ffa066',
+			muted: '#727169'
+		},
+		light: {
+			id: 'kanagawa-lotus',
+			name: 'Kanagawa Lotus',
+			type: 'light',
+			primary: '#4d699b',
+			bg: '#f2ecde',
+			surface: '#e7dfce',
+			border: '#d5cbb8',
+			text: '#545464',
+			heading: '#43436c',
+			accent: '#6f894e',
+			green: '#6f894e',
+			yellow: '#a07e3b',
+			red: '#c84053',
+			blue: '#4d699b',
+			purple: '#b35b79',
+			aqua: '#597b75',
+			orange: '#cc6d00',
+			muted: '#8a8980'
+		}
+	},
+	{
+		family: 'Everforest',
+		dark: {
+			id: 'everforest',
+			name: 'Everforest Dark',
+			type: 'dark',
+			primary: '#a7c080',
+			bg: '#272e33',
+			surface: '#2d353b',
+			border: '#414b50',
+			text: '#d3c6aa',
+			heading: '#a7c080',
+			accent: '#dbbc7f',
+			green: '#a7c080',
+			yellow: '#dbbc7f',
+			red: '#e67e80',
+			blue: '#7fbbb3',
+			purple: '#d699b6',
+			aqua: '#83c092',
+			orange: '#e69875',
+			muted: '#7a8478'
+		},
+		light: {
+			id: 'everforest-light',
+			name: 'Everforest Light',
+			type: 'light',
+			primary: '#8da101',
+			bg: '#fdf6e3',
+			surface: '#f4ede0',
+			border: '#e0d7c3',
+			text: '#5c6a72',
+			heading: '#343f44',
+			accent: '#dfa000',
+			green: '#8da101',
+			yellow: '#dfa000',
+			red: '#f85552',
+			blue: '#3a94c5',
+			purple: '#df69ba',
+			aqua: '#35a77c',
+			orange: '#f57d26',
+			muted: '#939f91'
+		}
+	},
+	{
+		family: 'Min Theme',
+		dark: {
+			id: 'min-theme',
+			name: 'Min Dark',
+			type: 'dark',
+			primary: '#ffffff',
+			bg: '#1a1a1a',
+			surface: '#242424',
+			border: '#383838',
+			text: '#e0e0e0',
+			heading: '#ffffff',
+			accent: '#a0a0a0',
+			green: '#8bc34a',
+			yellow: '#ffeb3b',
+			red: '#f44336',
+			blue: '#2196f3',
+			purple: '#9c27b0',
+			aqua: '#00bcd4',
+			orange: '#ff9800',
+			muted: '#757575'
+		},
+		light: {
+			id: 'min-light',
+			name: 'Min Light',
+			type: 'light',
+			primary: '#111111',
+			bg: '#ffffff',
+			surface: '#f5f5f5',
+			border: '#e0e0e0',
+			text: '#222222',
+			heading: '#000000',
+			accent: '#666666',
+			green: '#2e7d32',
+			yellow: '#f57f17',
+			red: '#c62828',
+			blue: '#1565c0',
+			purple: '#6a1b9a',
+			aqua: '#00838f',
+			orange: '#ef6c00',
+			muted: '#757575'
+		}
+	},
+	{
+		family: 'Material Theme',
+		dark: {
+			id: 'material-theme',
+			name: 'Material Dark',
+			type: 'dark',
+			primary: '#80cbc4',
+			bg: '#212121',
+			surface: '#292929',
+			border: '#3a3a3a',
+			text: '#eeffff',
+			heading: '#80cbc4',
+			accent: '#ffcb6b',
+			green: '#c3e88d',
+			yellow: '#ffcb6b',
+			red: '#ff5370',
+			blue: '#82aaff',
+			purple: '#c792ea',
+			aqua: '#89ddff',
+			orange: '#f78c6c',
+			muted: '#545454'
+		},
+		light: {
+			id: 'material-light',
+			name: 'Material Light',
+			type: 'light',
+			primary: '#009688',
+			bg: '#fafafa',
+			surface: '#ffffff',
+			border: '#e0e0e0',
+			text: '#263238',
+			heading: '#37474f',
+			accent: '#ff4081',
+			green: '#4caf50',
+			yellow: '#ffb300',
+			red: '#f44336',
+			blue: '#2196f3',
+			purple: '#9c27b0',
+			aqua: '#00bcd4',
+			orange: '#ff9800',
+			muted: '#90a4ae'
+		}
+	},
+	{
+		family: 'LaserWave',
+		dark: {
+			id: 'laserwave',
+			name: 'LaserWave Dark',
+			type: 'dark',
+			primary: '#eb64b9',
+			bg: '#191721',
+			surface: '#22212c',
+			border: '#3b3848',
+			text: '#ffffff',
+			heading: '#40b4c4',
+			accent: '#74dfc4',
+			green: '#74dfc4',
+			yellow: '#ffe261',
+			red: '#eb64b9',
+			blue: '#40b4c4',
+			purple: '#b381c5',
+			aqua: '#74dfc4',
+			orange: '#ff9b5e',
+			muted: '#625e73'
+		},
+		light: {
+			id: 'laserwave-light',
+			name: 'LaserWave Light',
+			type: 'light',
+			primary: '#eb64b9',
+			bg: '#f9f7fa',
+			surface: '#ffffff',
+			border: '#eddfe9',
+			text: '#403444',
+			heading: '#281e2c',
+			accent: '#74dfc4',
+			green: '#74dfc4',
+			yellow: '#ffe261',
+			red: '#eb64b9',
+			blue: '#40b4c4',
+			purple: '#b381c5',
+			aqua: '#74dfc4',
+			orange: '#ff9b5e',
+			muted: '#8a7b8e'
+		}
+	},
+	{
+		family: 'Cyberpunk',
+		dark: {
+			id: 'cyberpunk',
+			name: 'Cyberpunk Dark',
+			type: 'dark',
+			primary: '#ff007f',
+			bg: '#272325',
+			surface: '#332e30',
+			border: '#4d4649',
+			text: '#f3e8ee',
+			heading: '#00ff9f',
+			accent: '#00e8c6',
+			green: '#00ff9f',
+			yellow: '#ffff00',
+			red: '#ff007f',
+			blue: '#00b8ff',
+			purple: '#d600ff',
+			aqua: '#00ffea',
+			orange: '#ff8800',
+			muted: '#726569'
+		},
+		light: {
+			id: 'cyberpunk-light',
+			name: 'Cyberpunk Light',
+			type: 'light',
+			primary: '#d80054',
+			bg: '#fdfcf0',
+			surface: '#ffffff',
+			border: '#ece9bc',
+			text: '#2e2a22',
+			heading: '#000000',
+			accent: '#00b8d4',
+			green: '#00b894',
+			yellow: '#f39c12',
+			red: '#d80054',
+			blue: '#0984e3',
+			purple: '#8e44ad',
+			aqua: '#00b8d4',
+			orange: '#e17055',
+			muted: '#7c776b'
+		}
+	},
+	{
+		family: 'Mariana',
+		dark: {
+			id: 'mariana',
+			name: 'Mariana Dark',
+			type: 'dark',
+			primary: '#5fb3b3',
+			bg: '#263138',
+			surface: '#303c44',
+			border: '#41505a',
+			text: '#d8dee9',
+			heading: '#5fb3b3',
+			accent: '#fac863',
+			green: '#99c794',
+			yellow: '#fac863',
+			red: '#ec5f67',
+			blue: '#6699cc',
+			purple: '#c594c5',
+			aqua: '#5fb3b3',
+			orange: '#f99157',
+			muted: '#667885'
+		},
+		light: {
+			id: 'mariana-light',
+			name: 'Mariana Light',
+			type: 'light',
+			primary: '#5fb3b3',
+			bg: '#f3f6f9',
+			surface: '#ffffff',
+			border: '#dae3ea',
+			text: '#34424e',
+			heading: '#212c35',
+			accent: '#f99157',
+			green: '#99c794',
+			yellow: '#fac863',
+			red: '#ec5f67',
+			blue: '#6699cc',
+			purple: '#c594c5',
+			aqua: '#5fb3b3',
+			orange: '#f99157',
+			muted: '#7b8e9b'
+		}
+	},
+	{
+		family: 'Darcula',
+		dark: {
+			id: 'darcula',
+			name: 'Darcula Dark',
+			type: 'dark',
+			primary: '#cc7832',
+			bg: '#2b2b2b',
+			surface: '#313335',
+			border: '#43454a',
+			text: '#a9b7c6',
+			heading: '#cc7832',
+			accent: '#6897bb',
+			green: '#629755',
+			yellow: '#bbb529',
+			red: '#ff6b68',
+			blue: '#6897bb',
+			purple: '#9876aa',
+			aqua: '#20999d',
+			orange: '#cc7832',
+			muted: '#606366'
+		},
+		light: {
+			id: 'darcula-light',
+			name: 'Darcula Light',
+			type: 'light',
+			primary: '#2470b3',
+			bg: '#f2f2f2',
+			surface: '#ffffff',
+			border: '#d1d1d1',
+			text: '#2b2b2b',
+			heading: '#000000',
+			accent: '#9876aa',
+			green: '#499c54',
+			yellow: '#cc820e',
+			red: '#cf4f4f',
+			blue: '#2470b3',
+			purple: '#9876aa',
+			aqua: '#20999d',
+			orange: '#cb6c20',
+			muted: '#808080'
+		}
+	},
+	{
+		family: 'Poimandres',
+		dark: {
+			id: 'poimandres',
+			name: 'Poimandres Dark',
+			type: 'dark',
+			primary: '#5de4c7',
+			bg: '#171922',
+			surface: '#1b1e28',
+			border: '#2b3040',
+			text: '#a6accd',
+			heading: '#5de4c7',
+			accent: '#e4f0fb',
+			green: '#5de4c7',
+			yellow: '#fffac2',
+			red: '#d0679d',
+			blue: '#89ddff',
+			purple: '#f087bd',
+			aqua: '#5de4c7',
+			orange: '#add7ff',
+			muted: '#506477'
+		},
+		light: {
+			id: 'poimandres-light',
+			name: 'Poimandres Light',
+			type: 'light',
+			primary: '#387687',
+			bg: '#f4f6f8',
+			surface: '#ffffff',
+			border: '#dbe2e8',
+			text: '#303942',
+			heading: '#1b2229',
+			accent: '#50a14f',
+			green: '#50a14f',
+			yellow: '#c18401',
+			red: '#d04255',
+			blue: '#387687',
+			purple: '#8e63bb',
+			aqua: '#3ba5ab',
+			orange: '#d17b38',
+			muted: '#768390'
+		}
+	},
+	{
+		family: 'Solarized',
+		dark: {
+			id: 'solarized-dark',
+			name: 'Solarized Dark',
+			type: 'dark',
+			primary: '#268bd2',
+			bg: '#002b36',
+			surface: '#073642',
+			border: '#586e75',
+			text: '#839496',
+			heading: '#93a1a1',
+			accent: '#b58900',
+			green: '#859900',
+			yellow: '#b58900',
+			red: '#dc322f',
+			blue: '#268bd2',
+			purple: '#6c71c4',
+			aqua: '#2aa198',
+			orange: '#cb4b16',
+			muted: '#657b83'
+		},
+		light: {
+			id: 'solarized-light',
+			name: 'Solarized Light',
+			type: 'light',
+			primary: '#268bd2',
+			bg: '#fdf6e3',
+			surface: '#eee8d5',
+			border: '#d33682',
+			text: '#657b83',
+			heading: '#073642',
+			accent: '#b58900',
+			green: '#859900',
+			yellow: '#b58900',
+			red: '#dc322f',
+			blue: '#268bd2',
+			purple: '#6c71c4',
+			aqua: '#2aa198',
+			orange: '#cb4b16',
+			muted: '#93a1a1'
+		}
+	},
+	{
+		family: 'PaperColor',
+		dark: {
+			id: 'papercolor-dark',
+			name: 'PaperColor Dark',
+			type: 'dark',
+			primary: '#58b5e1',
+			bg: '#1c1c1c',
+			surface: '#262626',
+			border: '#3a3a3a',
+			text: '#d0d0d0',
+			heading: '#eeeeee',
+			accent: '#afd700',
+			green: '#5faf5f',
+			yellow: '#ffaf00',
+			red: '#df0000',
+			blue: '#58b5e1',
+			purple: '#af87d7',
+			aqua: '#00afaf',
+			orange: '#d75f00',
+			muted: '#808080'
+		},
+		light: {
+			id: 'papercolor',
+			name: 'PaperColor Light',
+			type: 'light',
+			primary: '#005f87',
+			bg: '#eeeeee',
+			surface: '#ffffff',
+			border: '#e4e4e4',
+			text: '#444444',
+			heading: '#005f87',
+			accent: '#d75f00',
+			green: '#8700af',
+			yellow: '#d75f00',
+			red: '#df0000',
+			blue: '#005f87',
+			purple: '#af87d7',
+			aqua: '#00afaf',
+			orange: '#d75f00',
+			muted: '#878787'
+		}
+	},
+	{
+		family: 'Quiet',
+		dark: {
+			id: 'quiet-dark',
+			name: 'Quiet Dark',
+			type: 'dark',
+			primary: '#7aa6da',
+			bg: '#1e1e2e',
+			surface: '#27273a',
+			border: '#3e3e58',
+			text: '#cdd6f4',
+			heading: '#f5e0dc',
+			accent: '#a6e3a1',
+			green: '#a6e3a1',
+			yellow: '#f9e2af',
+			red: '#f38ba8',
+			blue: '#89b4fa',
+			purple: '#cba6f7',
+			aqua: '#94e2d5',
+			orange: '#fab387',
+			muted: '#6c7086'
+		},
+		light: {
+			id: 'quiet-light',
+			name: 'Quiet Light',
+			type: 'light',
+			primary: '#4a7bb0',
+			bg: '#f5f5f5',
+			surface: '#ffffff',
+			border: '#e0e0e0',
+			text: '#333333',
+			heading: '#111111',
+			accent: '#7a3e9d',
+			green: '#448c27',
+			yellow: '#aa3731',
+			red: '#aa3731',
+			blue: '#4a7bb0',
+			purple: '#7a3e9d',
+			aqua: '#3b6978',
+			orange: '#9b59b6',
+			muted: '#777777'
+		}
+	},
+	{
+		family: 'Deep Material',
+		dark: {
+			id: 'deep-dark-material',
+			name: 'Deep Dark Material',
+			type: 'dark',
+			primary: '#528bff',
+			bg: '#181a1f',
+			surface: '#1f232a',
+			border: '#2c313a',
+			text: '#abb2bf',
+			heading: '#e5c07b',
+			accent: '#98c379',
+			green: '#98c379',
+			yellow: '#e5c07b',
+			red: '#e06c75',
+			blue: '#528bff',
+			purple: '#c678dd',
+			aqua: '#56b6c2',
+			orange: '#d19a66',
+			muted: '#5c6370'
+		},
+		light: {
+			id: 'deep-light-material',
+			name: 'Deep Light Material',
+			type: 'light',
+			primary: '#ff5370',
+			bg: '#f7f8fa',
+			surface: '#ffffff',
+			border: '#e2e6eb',
+			text: '#2a2d34',
+			heading: '#18191c',
+			accent: '#82aaff',
+			green: '#4caf50',
+			yellow: '#ffb300',
+			red: '#ff5370',
+			blue: '#82aaff',
+			purple: '#c792ea',
+			aqua: '#89ddff',
+			orange: '#f78c6c',
+			muted: '#758195'
+		}
+	},
+	{
+		family: 'Outrun',
+		dark: {
+			id: 'outrun',
+			name: 'Outrun Dark',
+			type: 'dark',
+			primary: '#ff4181',
+			bg: '#120919',
+			surface: '#190e24',
+			border: '#2b1442',
+			text: '#f3e8fd',
+			heading: '#ff4181',
+			accent: '#00e5ff',
+			green: '#00e676',
+			yellow: '#ffd600',
+			red: '#ff1744',
+			blue: '#00b0ff',
+			purple: '#d500f9',
+			aqua: '#1de9b6',
+			orange: '#ff6d00',
+			muted: '#6d4d82'
+		},
+		light: {
+			id: 'outrun-light',
+			name: 'Outrun Light',
+			type: 'light',
+			primary: '#ff4181',
+			bg: '#fbf8fc',
+			surface: '#ffffff',
+			border: '#ebd8ef',
+			text: '#3c2a42',
+			heading: '#24142a',
+			accent: '#00e5ff',
+			green: '#00e676',
+			yellow: '#ffd600',
+			red: '#ff1744',
+			blue: '#00b0ff',
+			purple: '#d500f9',
+			aqua: '#1de9b6',
+			orange: '#ff6d00',
+			muted: '#8c7b93'
+		}
+	},
+	{
+		family: 'Aura',
+		dark: {
+			id: 'aura',
+			name: 'Aura Dark',
+			type: 'dark',
+			primary: '#a277ff',
+			bg: '#15141b',
+			surface: '#1a1923',
+			border: '#292639',
+			text: '#edecee',
+			heading: '#a277ff',
+			accent: '#61ffca',
+			green: '#61ffca',
+			yellow: '#ffca85',
+			red: '#ff6767',
+			blue: '#82e2ff',
+			purple: '#a277ff',
+			aqua: '#61ffca',
+			orange: '#ff9468',
+			muted: '#6d6d7c'
+		},
+		light: {
+			id: 'aura-light',
+			name: 'Aura Light',
+			type: 'light',
+			primary: '#a277ff',
+			bg: '#f9f8fc',
+			surface: '#ffffff',
+			border: '#e6e0f2',
+			text: '#383545',
+			heading: '#1c1926',
+			accent: '#61ffca',
+			green: '#61ffca',
+			yellow: '#ffca85',
+			red: '#ff6767',
+			blue: '#82e2ff',
+			purple: '#a277ff',
+			aqua: '#61ffca',
+			orange: '#ff9468',
+			muted: '#7b778d'
+		}
+	},
+	{
+		family: 'Spacegray',
+		dark: {
+			id: 'spacegray',
+			name: 'Spacegray Dark',
+			type: 'dark',
+			primary: '#8fa1b3',
+			bg: '#2b303c',
+			surface: '#343d46',
+			border: '#434e59',
+			text: '#c0c5ce',
+			heading: '#8fa1b3',
+			accent: '#ebcb8b',
+			green: '#a3be8c',
+			yellow: '#ebcb8b',
+			red: '#bf616a',
+			blue: '#8fa1b3',
+			purple: '#b48ead',
+			aqua: '#96b5b4',
+			orange: '#d08770',
+			muted: '#65737e'
+		},
+		light: {
+			id: 'spacegray-light',
+			name: 'Spacegray Light',
+			type: 'light',
+			primary: '#8fa1b3',
+			bg: '#f0f2f4',
+			surface: '#ffffff',
+			border: '#d7dcde',
+			text: '#343d46',
+			heading: '#1f2429',
+			accent: '#ebcb8b',
+			green: '#a3be8c',
+			yellow: '#ebcb8b',
+			red: '#bf616a',
+			blue: '#8fa1b3',
+			purple: '#b48ead',
+			aqua: '#96b5b4',
+			orange: '#d08770',
+			muted: '#65737e'
+		}
+	},
+	{
+		family: 'City Lights',
+		dark: {
+			id: 'city-lights',
+			name: 'City Lights Dark',
+			type: 'dark',
+			primary: '#539afc',
+			bg: '#1d252c',
+			surface: '#212c35',
+			border: '#334350',
+			text: '#a0b3c6',
+			heading: '#539afc',
+			accent: '#008b94',
+			green: '#8bd49c',
+			yellow: '#ebbf83',
+			red: '#d95468',
+			blue: '#539afc',
+			purple: '#b62d65',
+			aqua: '#70e1e8',
+			orange: '#e27e8d',
+			muted: '#52687c'
+		},
+		light: {
+			id: 'city-lights-light',
+			name: 'City Lights Light',
+			type: 'light',
+			primary: '#539afc',
+			bg: '#f4f6fa',
+			surface: '#ffffff',
+			border: '#dbe1ec',
+			text: '#333f48',
+			heading: '#1d242a',
+			accent: '#008b94',
+			green: '#28a745',
+			yellow: '#e29b38',
+			red: '#d95468',
+			blue: '#539afc',
+			purple: '#b62d65',
+			aqua: '#38b2ac',
+			orange: '#e27e8d',
+			muted: '#687687'
+		}
+	}
+];
+
+// Flat list of all 76 themes
+const ALL_THEMES = [];
+for (const entry of THEME_DATA) {
+	ALL_THEMES.push({ ...entry.dark, family: entry.family });
+	ALL_THEMES.push({ ...entry.light, family: entry.family });
+}
+
+// Generate src/lib/shared/themes.ts
+const tsContent = `export interface ThemeDefinition {
+	id: string;
+	family: string;
+	name: string;
+	type: 'dark' | 'light';
+	primary: string;
+	bg: string;
+	surface: string;
+	border: string;
+	text: string;
+	heading: string;
+	accent: string;
+	green: string;
+	yellow: string;
+	red: string;
+	blue: string;
+	purple: string;
+	aqua: string;
+	orange: string;
+	muted: string;
+}
+
+export interface ThemeFamily {
+	family: string;
+	dark: ThemeDefinition;
+	light: ThemeDefinition;
+}
+
+export const THEME_FAMILIES: ThemeFamily[] = ${JSON.stringify(
+	THEME_DATA.map((entry) => ({
+		family: entry.family,
+		dark: { ...entry.dark, family: entry.family },
+		light: { ...entry.light, family: entry.family }
+	})),
+	null,
+	'\t'
+)};
+
+export const THEMES: ThemeDefinition[] = ${JSON.stringify(ALL_THEMES, null, '\t')};
+
+export const DEFAULT_THEME_ID = 'gruvbox';
+
+export function isLightTheme(id: string): boolean {
+	const theme = THEMES.find((t) => t.id === id);
+	return theme?.type === 'light';
+}
+
+export function getSystemGruvboxTheme(prefersLight: boolean): string {
+	return prefersLight ? 'gruvbox-light' : 'gruvbox';
+}
+
+export function getTheme(id: string): ThemeDefinition {
+	return THEMES.find((t) => t.id === id) ?? THEMES[0]!;
+}
+`;
+
+fs.writeFileSync(path.resolve('src/lib/shared/themes.ts'), tsContent, 'utf-8');
+console.log(
+	`Generated src/lib/shared/themes.ts with ${ALL_THEMES.length} themes across ${THEME_DATA.length} families.`
+);
+
+// Generate src/styles/themes.css
+let cssContent = `/* Auto-generated themes stylesheet for Quizky */\n\n`;
+
+for (const theme of ALL_THEMES) {
+	const isDark = theme.type === 'dark';
+	const selectors = [`:root[data-theme='${theme.id}']`, `[data-theme='${theme.id}']`];
+
+	if (theme.id === 'gruvbox') {
+		selectors.push(`:root[data-theme='gruvbox-dark']`, `[data-theme='gruvbox-dark']`);
+	} else if (theme.id === 'papercolor') {
+		selectors.push(`:root[data-theme='papercolor-light']`, `[data-theme='papercolor-light']`);
+	}
+
+	cssContent += `/* ${theme.name} (${theme.type}) */\n`;
+	cssContent += `${selectors.join(',\n')} {\n`;
+	cssContent += `\t--color-canvas: ${theme.bg};\n`;
+	cssContent += `\t--color-surface: ${theme.surface};\n`;
+	cssContent += `\t--color-border: ${theme.border};\n`;
+	cssContent += `\t--color-ink: ${theme.text};\n`;
+	cssContent += `\t--color-heading: ${theme.heading};\n`;
+	cssContent += `\t--color-brand: ${theme.primary};\n`;
+	cssContent += `\t--color-brand-dark: ${theme.primary};\n`;
+	cssContent += `\t--color-energy: ${theme.accent};\n`;
+	cssContent += `\t--color-sunshine: ${theme.yellow};\n`;
+	cssContent += `\t--color-success: ${theme.green};\n`;
+	cssContent += `\t--color-danger: ${theme.red};\n`;
+	cssContent += `\t--color-danger-tint: ${isDark ? 'rgba(251, 73, 52, 0.18)' : 'rgba(220, 38, 38, 0.12)'};\n`;
+	cssContent += `\t--color-tint: ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)'};\n`;
+	cssContent += `\t--color-elevated: ${theme.surface};\n`;
+	cssContent += `\t--color-muted: ${theme.muted};\n`;
+	cssContent += `\t--gruv-bg-hard: ${theme.bg};\n`;
+	cssContent += `\t--gruv-bg0: ${theme.surface};\n`;
+	cssContent += `\t--gruv-bg-soft: ${theme.border};\n`;
+	cssContent += `\t--gruv-bg1: ${theme.surface};\n`;
+	cssContent += `\t--gruv-bg2: ${theme.border};\n`;
+	cssContent += `\t--gruv-bg3: ${theme.muted};\n`;
+	cssContent += `\t--gruv-bg4: ${theme.muted};\n`;
+	cssContent += `\t--gruv-fg0: ${theme.heading};\n`;
+	cssContent += `\t--gruv-fg1: ${theme.text};\n`;
+	cssContent += `\t--gruv-fg2: ${theme.text};\n`;
+	cssContent += `\t--gruv-fg3: ${theme.muted};\n`;
+	cssContent += `\t--gruv-fg4: ${theme.muted};\n`;
+	cssContent += `\t--gruv-gray: ${theme.muted};\n`;
+	cssContent += `\t--gruv-red: ${theme.red};\n`;
+	cssContent += `\t--gruv-green: ${theme.green};\n`;
+	cssContent += `\t--gruv-yellow: ${theme.yellow};\n`;
+	cssContent += `\t--gruv-blue: ${theme.blue};\n`;
+	cssContent += `\t--gruv-purple: ${theme.purple};\n`;
+	cssContent += `\t--gruv-aqua: ${theme.aqua};\n`;
+	cssContent += `\t--gruv-orange: ${theme.orange};\n`;
+	cssContent += `\t--bs-body-bg: var(--color-canvas);\n`;
+	cssContent += `\t--bs-body-color: var(--color-ink);\n`;
+	cssContent += `\t--bs-border-color: var(--color-border);\n`;
+	cssContent += `\t--bs-primary: ${theme.primary};\n`;
+	cssContent += `\t--bs-secondary: ${theme.border};\n`;
+	cssContent += `\t--bs-success: ${theme.green};\n`;
+	cssContent += `\t--bs-warning: ${theme.yellow};\n`;
+	cssContent += `\t--bs-danger: ${theme.red};\n`;
+	cssContent += `\t--bs-info: ${theme.blue};\n`;
+	cssContent += `\t--bs-dark: ${isDark ? theme.bg : theme.heading};\n`;
+	cssContent += `\t--bs-light: ${isDark ? '#f0f6fc' : theme.bg};\n`;
+	cssContent += `\t--bs-card-bg: var(--color-surface);\n`;
+	cssContent += `\t--bs-card-border-color: var(--color-border);\n`;
+	cssContent += `\tcolor-scheme: ${theme.type};\n`;
+	cssContent += `\t--shadow-button: ${isDark ? '0 4px 0 #141617' : '0 4px 0 rgba(0, 0, 0, 0.12)'};\n`;
+	cssContent += `\t--shadow-card: ${isDark ? '0 6px 0 #141617' : '0 4px 0 rgba(0, 0, 0, 0.08)'};\n`;
+	cssContent += `}\n\n`;
+}
+
+fs.writeFileSync(path.resolve('src/styles/themes.css'), cssContent, 'utf-8');
+console.log(`Generated src/styles/themes.css for all ${ALL_THEMES.length} themes.`);

@@ -1,10 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
+	import EnergyIcon from '#lib/components/EnergyIcon.svelte';
 	import QrCodeModal from '#lib/components/QrCodeModal.svelte';
+	import QuestionText from '#lib/components/QuestionText.svelte';
 	import SiteHeader from '#lib/components/SiteHeader.svelte';
 	import { BRAND } from '#lib/shared/brand.js';
 	import { renderQrCodeSvgData } from '#lib/shared/qrcode.js';
+	import {
+		playClockPreview,
+		playCountdownTick,
+		playTimeUpSound,
+		stopCountdownSound,
+		unlockAudioContext
+	} from '#lib/shared/sound.js';
 	import {
 		PROTOCOL_VERSION,
 		type GameSessionStatus,
@@ -47,6 +56,8 @@
 	let copiedCode = $state(false);
 	let copiedLink = $state(false);
 	let showQrModal = $state(false);
+	let soundEnabled = $state(true);
+	let lastTickedSecond: number | null = null;
 	let activeSocket: WebSocket | null = null;
 
 	let qrSvgData = $derived(renderQrCodeSvgData(data.joinUrl || data.snapshot.joinCode));
@@ -106,6 +117,13 @@
 		});
 	}
 
+	function handleSkipQuestion() {
+		sendCommand({
+			type: 'teacher_skip_question',
+			requestId: crypto.randomUUID()
+		});
+	}
+
 	function handleEndGame() {
 		const promptText =
 			status === 'lobby'
@@ -145,7 +163,20 @@
 
 		const clockInterval = setInterval(() => {
 			nowMs = Date.now();
-		}, 250);
+			if (status === 'in_progress' && questionPhase === 'open' && currentQuestion && soundEnabled) {
+				const deadlineMs = Date.parse(currentQuestion.deadlineAt);
+				if (Number.isFinite(deadlineMs)) {
+					const secs = Math.max(0, Math.ceil((deadlineMs - nowMs) / 1000));
+					if (secs >= 1 && secs <= 5 && secs !== lastTickedSecond) {
+						lastTickedSecond = secs;
+						playCountdownTick(secs);
+					} else if (secs === 0 && lastTickedSecond !== null && lastTickedSecond > 0) {
+						lastTickedSecond = 0;
+						playTimeUpSound();
+					}
+				}
+			}
+		}, 100);
 
 		function connect() {
 			if (destroyed) return;
@@ -207,6 +238,7 @@
 						currentQuestion = q;
 						answeredCount = 0;
 						lastQuestionResult = null;
+						lastTickedSecond = null;
 						nowMs = Date.now();
 					} else if (message.type === 'answer_received' && message.payload) {
 						const payload = message.payload as { answeredCount: number };
@@ -214,6 +246,10 @@
 					} else if (message.type === 'question_ended' && message.payload) {
 						const res = message.payload as TeacherQuestionResult;
 						questionPhase = 'closed';
+						if (soundEnabled && lastTickedSecond !== null && lastTickedSecond > 0) {
+							lastTickedSecond = 0;
+							playTimeUpSound();
+						}
 						if (res.role === 'teacher') {
 							lastQuestionResult = res;
 							answeredCount = res.answeredCount;
@@ -261,8 +297,10 @@
 	});
 </script>
 
+<svelte:window onpointerdown={unlockAudioContext} onkeydown={unlockAudioContext} />
+
 <svelte:head>
-	<title>Session {data.snapshot.joinCode} · {data.snapshot.quizTitle} — {BRAND.name}</title>
+	<title>Session {data.snapshot.joinCode} · {data.snapshot.quizTitle} · {BRAND.name}</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
@@ -271,16 +309,38 @@
 
 	<main class="lobby-main">
 		<div class="lobby-topbar">
-			<a class="nav-link" href={resolve('/(teacher)/dashboard')}>← Back to dashboard</a>
+			<a class="nav-link" href={resolve('/(teacher)/dashboard')}
+				><EnergyIcon name="arrow-left" /> Back to dashboard</a
+			>
 			<div class="topbar-badges">
+				<button
+					type="button"
+					class="sound-toggle-pill"
+					aria-pressed={soundEnabled}
+					onclick={() => {
+						unlockAudioContext();
+						soundEnabled = !soundEnabled;
+						if (soundEnabled) {
+							playClockPreview();
+						} else {
+							stopCountdownSound();
+						}
+					}}
+				>
+					{#if soundEnabled}
+						<EnergyIcon name="volume-high" /> Sound on
+					{:else}
+						<EnergyIcon name="volume-x" /> Muted
+					{/if}
+				</button>
 				<span class="status-pill" data-status={status}>Status: {status}</span>
 				<div class="connection-pill" data-state={connectionState} role="status">
 					{#if connectionState === 'connected'}
-						● Live connection active
+						<EnergyIcon name="bolt" /> Live connection active
 					{:else if connectionState === 'connecting'}
-						◌ Connecting…
+						<span class="gruv-spinner" aria-hidden="true"></span> Connecting…
 					{:else}
-						◌ Reconnecting…
+						<span class="gruv-spinner" aria-hidden="true"></span> Reconnecting…
 					{/if}
 				</div>
 			</div>
@@ -315,13 +375,18 @@
 							type="button"
 							onclick={() => copyText(data.joinUrl, 'link')}
 						>
-							{copiedLink ? '✓ Copied link' : 'Copy link'}
+							{#if copiedLink}
+								<EnergyIcon name="check" /> Copied link
+							{:else}
+								<EnergyIcon name="link" /> Copy link
+							{/if}
 						</button>
 						<button
 							class="button button-primary button-small"
 							type="button"
 							onclick={() => (showQrModal = true)}
 						>
+							<EnergyIcon name="qr-code" />
 							Share QR code
 						</button>
 					</div>
@@ -346,8 +411,8 @@
 								role="img"
 								aria-label="Session QR code"
 							>
-								<rect width={qrSvgData.viewBoxSize} height={qrSvgData.viewBoxSize} fill="#ffffff" />
-								<path d={qrSvgData.pathData} fill="#111827" />
+								<rect width={qrSvgData.viewBoxSize} height={qrSvgData.viewBoxSize} fill="#fbf1c7" />
+								<path d={qrSvgData.pathData} fill="#1d2021" />
 							</svg>
 						</button>
 						<button
@@ -370,7 +435,11 @@
 						type="button"
 						onclick={() => copyText(data.snapshot.joinCode, 'code')}
 					>
-						{copiedCode ? '✓ Copied code' : 'Copy code'}
+						{#if copiedCode}
+							<EnergyIcon name="check" /> Copied code
+						{:else}
+							<EnergyIcon name="copy" /> Copy code
+						{/if}
 					</button>
 				</div>
 			</div>
@@ -404,12 +473,23 @@
 								<strong>Closed</strong>
 							{/if}
 						</div>
+						{#if questionPhase === 'open'}
+							<button
+								type="button"
+								class="button button-small button-secondary skip-quick-btn"
+								onclick={handleSkipQuestion}
+								title="Skip question"
+							>
+								<EnergyIcon name="skip-forward" size="0.9em" />
+								<span>Skip</span>
+							</button>
+						{/if}
 					</div>
 				</div>
 
-				<h2 id="active-question-title" class="active-question-text">
-					{currentQuestion.text}
-				</h2>
+				<div class="active-question-text">
+					<QuestionText id="active-question-title" headingTag="h2" text={currentQuestion.text} />
+				</div>
 
 				{#if currentQuestion.imageUrl}
 					<div class="active-question-media">
@@ -440,7 +520,7 @@
 									<span class="option-label">
 										{stat.text}
 										{#if stat.isCorrect}
-											<strong class="correct-tag">✓ Correct</strong>
+											<strong class="correct-tag"><EnergyIcon name="check" /> Correct</strong>
 										{/if}
 									</span>
 									<span class="option-count-badge">{stat.count}</span>
@@ -457,7 +537,7 @@
 						</button>
 					{:else if currentQuestionIndex < questionCount - 1}
 						<button class="button button-primary" type="button" onclick={handleAdvanceQuestion}>
-							Next question →
+							Next question <EnergyIcon name="arrow-right" />
 						</button>
 					{/if}
 
@@ -483,7 +563,7 @@
 							sessionId: data.snapshot.sessionId
 						})}
 					>
-						Full question breakdown →
+						Full question breakdown <EnergyIcon name="arrow-right" />
 					</a>
 				</div>
 
@@ -561,11 +641,11 @@
 							<span class="participant-name">{participant.nickname}</span>
 							<span class="participant-state">
 								{#if participant.status === 'connected'}
-									● Connected
+									<EnergyIcon name="bolt" /> Connected
 								{:else if participant.status === 'finished'}
-									✓ Finished
+									<EnergyIcon name="check" /> Finished
 								{:else}
-									○ Disconnected
+									<EnergyIcon name="close" /> Disconnected
 								{/if}
 							</span>
 						</li>
@@ -591,8 +671,9 @@
 <style>
 	.lobby-main {
 		display: grid;
+		align-content: start;
 		gap: var(--space-5);
-		padding-block: var(--space-5) var(--space-7);
+		padding-block: var(--space-6);
 	}
 
 	.lobby-topbar {
@@ -611,7 +692,8 @@
 	}
 
 	.status-pill,
-	.connection-pill {
+	.connection-pill,
+	.sound-toggle-pill {
 		display: inline-flex;
 		align-items: center;
 		border: 1px solid var(--color-border);
@@ -619,20 +701,29 @@
 		background: var(--color-surface);
 		padding: 0.3rem 0.85rem;
 		font-size: 0.82rem;
-		font-weight: 800;
+		font-weight: 700;
 		text-transform: capitalize;
 	}
 
+	.sound-toggle-pill {
+		color: var(--color-ink);
+		cursor: pointer;
+	}
+
+	.sound-toggle-pill:hover {
+		background: var(--color-tint);
+	}
+
 	.connection-pill[data-state='connected'] {
-		border-color: #1d9a65;
-		background: #e3faef;
-		color: #0e5a3a;
+		border-color: var(--gruv-green);
+		background: #2b331b;
+		color: var(--gruv-green);
 	}
 
 	.connection-pill[data-state='reconnecting'] {
-		border-color: var(--color-energy);
-		background: #fff2ec;
-		color: #9a3412;
+		border-color: var(--gruv-orange);
+		background: #3b2618;
+		color: var(--gruv-orange);
 	}
 
 	.join-banner {
@@ -691,19 +782,16 @@
 		place-items: center;
 		width: 6.75rem;
 		height: 6.75rem;
-		border: 1px solid var(--color-border);
+		border: 2px solid var(--gruv-fg0);
 		border-radius: var(--radius-md);
-		background: #ffffff;
+		background: #fbf1c7;
 		padding: 0.25rem;
 		cursor: pointer;
-		transition:
-			transform 0.15s ease,
-			box-shadow 0.15s ease;
+		transition: border-color 120ms ease;
 	}
 
 	.qr-preview-button:hover {
-		transform: scale(1.04);
-		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+		border-color: var(--color-brand);
 	}
 
 	.qr-inline-svg {
@@ -714,19 +802,20 @@
 
 	.join-code-label {
 		color: var(--color-brand);
-		font-size: 0.8rem;
-		font-weight: 800;
-		letter-spacing: 0.12em;
+		font-size: 0.76rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
 		text-transform: uppercase;
 	}
 
 	.join-code-value {
 		color: var(--color-ink);
-		font-family: var(--font-display);
-		font-size: clamp(2.4rem, 6vw, 3.75rem);
-		font-weight: 900;
+		font-family: var(--font-mono);
+		font-size: clamp(2rem, 5vw, 3.1rem);
+		font-weight: 700;
 		letter-spacing: 0.14em;
-		line-height: 1;
+		line-height: 1.1;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.live-question-panel,
@@ -756,8 +845,8 @@
 	}
 
 	.question-progress-badge {
-		background: var(--color-brand);
-		color: #ffffff;
+		background: var(--gruv-orange);
+		color: var(--gruv-bg-hard);
 	}
 
 	.question-points-badge {
@@ -769,6 +858,7 @@
 	.question-metrics {
 		display: flex;
 		flex-wrap: wrap;
+		align-items: center;
 		gap: var(--space-3);
 	}
 
@@ -781,22 +871,25 @@
 		background: var(--color-tint);
 		padding: 0.45rem 0.9rem;
 		font-size: 0.9rem;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.timer-pill[data-urgent='true'] {
-		border-color: #dc2626;
-		background: #fef2f2;
-		color: #991b1b;
+		border-color: var(--gruv-red);
+		background: var(--color-danger-tint);
+		color: var(--gruv-red);
 	}
 
 	.active-question-text {
-		font-size: clamp(1.35rem, 3vw, 2rem);
+		font-size: clamp(1.3rem, 2.8vw, 1.85rem);
+		white-space: pre-wrap;
 	}
 
 	.active-question-media {
 		display: flex;
 		justify-content: center;
 		width: 100%;
+		border: 1px solid var(--color-border);
 		border-radius: var(--radius-md);
 		background: var(--color-tint);
 		padding: var(--space-3);
@@ -808,7 +901,6 @@
 		max-height: 20rem;
 		border-radius: var(--radius-sm);
 		object-fit: contain;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 	}
 
 	.teacher-options-grid {
@@ -824,16 +916,16 @@
 		display: flex;
 		align-items: center;
 		gap: var(--space-3);
-		border: 2px solid var(--color-border);
+		border: 1.5px solid var(--color-border);
 		border-radius: var(--radius-md);
-		background: var(--color-surface);
+		background: var(--color-tint);
 		padding: var(--space-3) var(--space-4);
-		font-weight: 700;
+		font-weight: 600;
 	}
 
 	.teacher-option-card[data-correct='true'] {
-		border-color: #1d9a65;
-		background: #f0fdf7;
+		border-color: var(--gruv-green);
+		background: #2b331b;
 	}
 
 	.option-letter {
@@ -842,9 +934,9 @@
 		width: 2rem;
 		height: 2rem;
 		border-radius: 50%;
-		background: var(--color-tint);
-		color: var(--color-brand);
-		font-weight: 900;
+		background: var(--gruv-orange);
+		color: var(--gruv-bg-hard);
+		font-weight: 400;
 		flex-shrink: 0;
 	}
 
@@ -854,7 +946,7 @@
 
 	.correct-tag {
 		margin-left: var(--space-2);
-		color: #0e5a3a;
+		color: var(--gruv-green);
 		font-size: 0.85rem;
 	}
 
@@ -863,7 +955,8 @@
 		background: var(--color-tint);
 		padding: 0.2rem 0.65rem;
 		font-size: 0.85rem;
-		font-weight: 900;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.teacher-game-controls {
@@ -884,6 +977,7 @@
 		width: 100%;
 		border-collapse: collapse;
 		text-align: left;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.leaderboard-table th,
@@ -894,8 +988,8 @@
 
 	.leaderboard-table th {
 		color: var(--color-muted);
-		font-size: 0.8rem;
-		font-weight: 800;
+		font-size: 0.78rem;
+		font-weight: 700;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
 	}
@@ -904,7 +998,7 @@
 	.score-cell,
 	.name-cell,
 	.time-cell {
-		font-weight: 800;
+		font-weight: 700;
 	}
 
 	.participants-header {
@@ -931,8 +1025,8 @@
 
 	.empty-lobby-title {
 		margin-bottom: var(--space-2);
-		font-size: 1.15rem;
-		font-weight: 800;
+		font-size: 1.1rem;
+		font-weight: 700;
 	}
 
 	.participant-grid {
@@ -956,8 +1050,8 @@
 	}
 
 	.participant-chip[data-status='connected'] {
-		border-color: #1d9a65;
-		background: #f0fdf7;
+		border-color: var(--gruv-green);
+		background: #2b331b;
 	}
 
 	.participant-chip[data-status='disconnected'] {
@@ -965,24 +1059,22 @@
 	}
 
 	.participant-name {
-		font-weight: 800;
+		font-weight: 700;
 	}
 
 	.participant-state {
 		color: var(--color-muted);
 		font-size: 0.78rem;
-		font-weight: 700;
+		font-weight: 600;
 	}
 
-	.button-small {
-		min-height: 2.25rem;
-		padding: 0.4rem 0.85rem;
-		font-size: 0.85rem;
-	}
-
-	@media (max-width: 48rem) {
+	@media (max-width: 52rem) {
 		.join-banner {
 			grid-template-columns: 1fr;
+		}
+
+		.join-banner-cards {
+			justify-content: flex-start;
 		}
 	}
 </style>

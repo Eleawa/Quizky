@@ -9,6 +9,7 @@ import {
 	evaluateAnswerSubmission,
 	transitionAdvanceOrTimeout,
 	transitionEndGame,
+	transitionSkipQuestion,
 	transitionStartGame,
 	type EngineRoomState
 } from '../../../src/lib/game/engine/state-machine.js';
@@ -1302,6 +1303,7 @@ export class SessionRoom extends DurableObject<Env> {
 		if (
 			command.type === 'teacher_start_game' ||
 			command.type === 'teacher_advance_question' ||
+			command.type === 'teacher_skip_question' ||
 			command.type === 'teacher_end_game'
 		) {
 			if (attachment.role !== 'teacher') {
@@ -1406,6 +1408,70 @@ export class SessionRoom extends DurableObject<Env> {
 					type: 'error',
 					payload: { code: result.code, message: result.message }
 				});
+			}
+			return;
+		}
+
+		if (command.type === 'teacher_skip_question') {
+			if (this.hasProcessedRequest(command.requestId)) {
+				const snapshot = this.buildRoomSnapshot('teacher');
+				if (snapshot) {
+					this.send(ws, {
+						version: PROTOCOL_VERSION,
+						type: 'room_snapshot',
+						payload: snapshot
+					});
+				}
+				return;
+			}
+
+			const questions = this.getQuestions();
+			const result = transitionSkipQuestion(state, questions, nowMs);
+			if (!result.ok) {
+				this.send(ws, {
+					version: PROTOCOL_VERSION,
+					type: 'error',
+					payload: { code: result.code, message: result.message }
+				});
+				return;
+			}
+
+			this.recordProcessedRequest(command.requestId);
+			this.saveEngineState(result.nextState);
+			await this.scheduleRoomAlarm(result.alarmAtMs);
+
+			const leaderboard = this.emitQuestionClosedEvents(state.sessionId, result.skippedQuestion);
+
+			if (result.action === 'question_skipped') {
+				const openedAt = result.nextState.questionOpenedAt ?? new Date(nowMs).toISOString();
+				const deadlineAt = result.nextState.questionDeadlineAt ?? openedAt;
+				const publicQuestion = toPublicQuestion(
+					result.openedQuestion,
+					questions.length,
+					openedAt,
+					deadlineAt
+				);
+				this.broadcastToAuthenticated({
+					version: PROTOCOL_VERSION,
+					type: 'question_started',
+					payload: publicQuestion
+				});
+				this.broadcastToTeachers({
+					version: PROTOCOL_VERSION,
+					type: 'leaderboard_updated',
+					payload: {
+						sessionId: state.sessionId,
+						entries: this.computeLeaderboard()
+					}
+				});
+			} else if (result.action === 'game_completed') {
+				this.emitGameCompletedEvents(
+					state.sessionId,
+					result.nextState.status,
+					result.nextState.endedAt ?? new Date(nowMs).toISOString(),
+					questions.length,
+					leaderboard
+				);
 			}
 			return;
 		}
