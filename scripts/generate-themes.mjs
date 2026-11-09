@@ -1707,6 +1707,25 @@ console.log(
 	`Generated src/lib/shared/themes.ts with ${ALL_THEMES.length} themes across ${THEME_DATA.length} families.`
 );
 
+function mixHex(c1, c2, w) {
+	const r1 = parseInt(c1.slice(1, 3), 16),
+		g1 = parseInt(c1.slice(3, 5), 16),
+		b1 = parseInt(c1.slice(5, 7), 16);
+	const r2 = parseInt(c2.slice(1, 3), 16),
+		g2 = parseInt(c2.slice(3, 5), 16),
+		b2 = parseInt(c2.slice(5, 7), 16);
+	const r = Math.round(r1 * (1 - w) + r2 * w)
+		.toString(16)
+		.padStart(2, '0');
+	const g = Math.round(g1 * (1 - w) + g2 * w)
+		.toString(16)
+		.padStart(2, '0');
+	const b = Math.round(b1 * (1 - w) + b2 * w)
+		.toString(16)
+		.padStart(2, '0');
+	return `#${r}${g}${b}`;
+}
+
 // Generate src/styles/themes.css
 let cssContent = `/* Auto-generated themes stylesheet for Quizky */\n\n`;
 
@@ -1719,6 +1738,14 @@ for (const theme of ALL_THEMES) {
 	} else if (theme.id === 'papercolor') {
 		selectors.push(`:root[data-theme='papercolor-light']`, `[data-theme='papercolor-light']`);
 	}
+
+	const solidTint = isDark
+		? mixHex(theme.surface, theme.border, 0.3)
+		: mixHex(theme.surface, theme.border, 0.35);
+
+	const solidDangerTint = isDark
+		? mixHex(theme.bg, theme.red, 0.22)
+		: mixHex(theme.bg, theme.red, 0.16);
 
 	cssContent += `/* ${theme.name} (${theme.type}) */\n`;
 	cssContent += `${selectors.join(',\n')} {\n`;
@@ -1733,8 +1760,8 @@ for (const theme of ALL_THEMES) {
 	cssContent += `\t--color-sunshine: ${theme.yellow};\n`;
 	cssContent += `\t--color-success: ${theme.green};\n`;
 	cssContent += `\t--color-danger: ${theme.red};\n`;
-	cssContent += `\t--color-danger-tint: ${isDark ? 'rgba(251, 73, 52, 0.18)' : 'rgba(220, 38, 38, 0.12)'};\n`;
-	cssContent += `\t--color-tint: ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)'};\n`;
+	cssContent += `\t--color-danger-tint: ${solidDangerTint};\n`;
+	cssContent += `\t--color-tint: ${solidTint};\n`;
 	cssContent += `\t--color-elevated: ${theme.surface};\n`;
 	cssContent += `\t--color-muted: ${theme.muted};\n`;
 	cssContent += `\t--gruv-bg-hard: ${theme.bg};\n`;

@@ -10,14 +10,22 @@ import {
 } from '../validation/quiz.js';
 import {
 	deleteQuizForTeacher,
+	findPublicQuizDetail,
 	findQuizDetailForTeacher,
 	insertQuizWithQuestions,
+	listPublicQuizzes,
 	listQuizzesByTeacher,
 	replaceQuizAndQuestions,
+	updateQuizShareForTeacher,
 	updateQuizStatusForTeacher,
 	type QuizQuestionWrite
 } from './repository.js';
-import type { QuizDetail, QuizSummary } from '#lib/shared/quiz.js';
+import type {
+	LibraryQuizDetail,
+	LibraryQuizSummary,
+	QuizDetail,
+	QuizSummary
+} from '#lib/shared/quiz.js';
 
 function quizNotFound(): ApiError {
 	return new ApiError(404, 'quiz_not_found', 'Quiz not found.');
@@ -85,6 +93,7 @@ export async function createTeacherQuiz(
 			title: parsed.title,
 			description: parsed.description,
 			status: 'draft',
+			isPublic: false,
 			createdAt: now,
 			updatedAt: now
 		},
@@ -110,6 +119,14 @@ export async function updateTeacherQuiz(
 
 	const parsed = updateQuizSchema.parse(input);
 
+	if (parsed.isPublic === true && existing.status !== 'published') {
+		throw new ApiError(
+			400,
+			'invalid_quiz_share',
+			'Only published quizzes can be shared to the library.'
+		);
+	}
+
 	if (existing.status === 'published') {
 		const check = validateQuizForPublish({
 			status: existing.status,
@@ -134,6 +151,7 @@ export async function updateTeacherQuiz(
 		teacherId,
 		title: parsed.title,
 		description: parsed.description,
+		isPublic: parsed.isPublic,
 		updatedAt: now,
 		existingQuestionIds: existing.questions.map((question) => question.id),
 		questionWrites
@@ -225,4 +243,110 @@ export async function deleteTeacherQuiz(
 		teacherId,
 		existingQuestionIds: existing.questions.map((question) => question.id)
 	});
+}
+
+export async function shareTeacherQuiz(
+	db: Database,
+	teacherId: string,
+	quizId: string,
+	isPublic: boolean,
+	now: Date = new Date()
+): Promise<QuizDetail> {
+	const existing = await findQuizDetailForTeacher(db, quizId, teacherId);
+	if (!existing) throw quizNotFound();
+
+	if (existing.status === 'archived') {
+		throw new ApiError(409, 'quiz_archived', 'Archived quizzes cannot be shared.');
+	}
+
+	if (isPublic && existing.status !== 'published') {
+		throw new ApiError(
+			400,
+			'invalid_quiz_share',
+			'Only published quizzes can be shared to the library.'
+		);
+	}
+
+	await updateQuizShareForTeacher(db, {
+		quizId,
+		teacherId,
+		isPublic,
+		updatedAt: now
+	});
+
+	return getTeacherQuiz(db, teacherId, quizId);
+}
+
+export async function listLibraryQuizzes(
+	db: Database,
+	search?: string
+): Promise<LibraryQuizSummary[]> {
+	return listPublicQuizzes(db, search);
+}
+
+export async function getLibraryQuiz(db: Database, quizId: string): Promise<LibraryQuizDetail> {
+	const quiz = await findPublicQuizDetail(db, quizId);
+	if (!quiz) {
+		throw new ApiError(404, 'library_quiz_not_found', 'Shared quiz not found.');
+	}
+	return quiz;
+}
+
+export async function cloneLibraryQuiz(
+	db: Database,
+	targetTeacherId: string,
+	quizId: string,
+	now: Date = new Date()
+): Promise<QuizDetail> {
+	const sourceQuiz = await findPublicQuizDetail(db, quizId);
+	if (!sourceQuiz) {
+		throw new ApiError(404, 'library_quiz_not_found', 'Shared quiz not found.');
+	}
+
+	const clonedQuizId = crypto.randomUUID();
+	const baseTitle = `${sourceQuiz.title} (Copy)`;
+	const title = baseTitle.length > 120 ? baseTitle.slice(0, 117).trimEnd() + '...' : baseTitle;
+
+	const questionWrites: QuizQuestionWrite[] = sourceQuiz.questions.map(
+		(question, questionIndex) => {
+			const newQuestionId = crypto.randomUUID();
+			return {
+				question: {
+					id: newQuestionId,
+					quizId: clonedQuizId,
+					text: question.text,
+					imageUrl: question.imageUrl ?? null,
+					position: questionIndex,
+					timeLimitSeconds: question.timeLimitSeconds,
+					points: question.points,
+					createdAt: now,
+					updatedAt: now
+				},
+				options: question.options.map((option, optionIndex) => ({
+					id: crypto.randomUUID(),
+					questionId: newQuestionId,
+					text: option.text,
+					position: optionIndex,
+					isCorrect: option.isCorrect
+				}))
+			};
+		}
+	);
+
+	await insertQuizWithQuestions(
+		db,
+		{
+			id: clonedQuizId,
+			teacherId: targetTeacherId,
+			title,
+			description: sourceQuiz.description,
+			status: 'draft',
+			isPublic: false,
+			createdAt: now,
+			updatedAt: now
+		},
+		questionWrites
+	);
+
+	return getTeacherQuiz(db, targetTeacherId, clonedQuizId);
 }

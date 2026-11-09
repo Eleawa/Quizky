@@ -20,6 +20,7 @@
 		<ThemePicker />
 		{#if teacher}
 			<span class="session-name">Hi, {teacher.displayName}</span>
+			<a class="button button-secondary" href={resolve('/(teacher)/library')}>Library</a>
 			<a class="button button-secondary" href={resolve('/(teacher)/dashboard')}>Dashboard</a>
 		{:else}
 			<a class="nav-link px-2" href={resolve('/login')}>Sign in</a>

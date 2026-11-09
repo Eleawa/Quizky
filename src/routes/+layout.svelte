@@ -9,6 +9,7 @@
 	import { afterNavigate } from '$app/navigation';
 	import { navigating } from '$app/state';
 	import favicon from '#lib/assets/favicon.svg';
+	import BackgroundDoodles from '#lib/components/BackgroundDoodles.svelte';
 	import { animateRouteEnter } from '#lib/shared/animations.js';
 	import type { LayoutProps } from './$types';
 
@@ -69,6 +70,8 @@
 		<span>Loading…</span>
 	</div>
 {/if}
+
+<BackgroundDoodles />
 
 <div class="app-shell" bind:this={appShell}>
 	{@render children()}

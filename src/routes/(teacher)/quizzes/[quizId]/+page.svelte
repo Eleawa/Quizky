@@ -94,6 +94,7 @@
 	let title = $state(initial.title);
 	let description = $state(initial.description ?? '');
 	let status = $state<QuizStatus>(initial.status);
+	let isPublic = $state(initial.isPublic ?? false);
 	let questions = $state<EditableQuestion[]>(toEditableQuestions(initial));
 	let savedSnapshot = $state(
 		snapshotPayload(initial.title, initial.description ?? '', toEditableQuestions(initial))
@@ -101,6 +102,7 @@
 
 	let saving = $state(false);
 	let publishing = $state(false);
+	let sharing = $state(false);
 	let hosting = $state(false);
 	let archiving = $state(false);
 	let deleting = $state(false);
@@ -354,8 +356,45 @@
 		title = quiz.title;
 		description = quiz.description ?? '';
 		status = quiz.status;
+		isPublic = quiz.isPublic ?? false;
 		questions = toEditableQuestions(quiz);
 		savedSnapshot = snapshotPayload(quiz.title, quiz.description ?? '', questions);
+	}
+
+	async function handleToggleShare(event: Event) {
+		const target = event.currentTarget as HTMLInputElement;
+		const nextState = target.checked;
+		if (sharing || status !== 'published' || isArchived) return;
+
+		sharing = true;
+		formError = '';
+		statusNotice = '';
+		try {
+			const response = await fetch(`/api/quizzes/${encodeURIComponent(data.quiz.id)}/share`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ isPublic: nextState })
+			});
+
+			if (!response.ok) {
+				const apiError = await readApiError(response);
+				formError = apiError.message;
+				target.checked = !nextState;
+				return;
+			}
+
+			const body = (await response.json()) as { quiz: QuizDetail };
+			isPublic = body.quiz.isPublic;
+			statusNotice = isPublic
+				? 'Quiz is now shared in the Community Library.'
+				: 'Quiz is no longer shared in the Community Library.';
+			await invalidateAll();
+		} catch {
+			formError = 'Could not update library sharing settings.';
+			target.checked = !nextState;
+		} finally {
+			sharing = false;
+		}
 	}
 
 	async function saveQuizInternal(): Promise<boolean> {
@@ -368,6 +407,7 @@
 			body: JSON.stringify({
 				title,
 				description: description || null,
+				isPublic,
 				questions: toQuestionInputs()
 			})
 		});
@@ -543,6 +583,11 @@
 			>
 			<div class="editor-badges">
 				<span class="status-badge status-{status}">Status: {statusLabel(status)}</span>
+				{#if isPublic}
+					<span class="status-badge status-shared"
+						><EnergyIcon name="check" /> Shared in Library</span
+					>
+				{/if}
 				{#if !isArchived}
 					<span class="dirty-badge" data-dirty={isDirty}>
 						{isDirty ? 'Unsaved changes' : 'All changes saved'}
@@ -601,6 +646,33 @@
 						<p class="field-error">{fieldErrors.description}</p>
 					{/if}
 				</div>
+
+				{#if status === 'published'}
+					<div class="field share-field">
+						<label class="checkbox-field">
+							<input
+								type="checkbox"
+								checked={isPublic}
+								disabled={isArchived || sharing}
+								onchange={handleToggleShare}
+							/>
+							<span>Share with other teachers in Community Library</span>
+						</label>
+						{#if isPublic}
+							<p class="field-hint" style="color: var(--gruv-green);">
+								This quiz is listed in the Community Library for other teachers to browse and clone.
+							</p>
+						{:else}
+							<p class="field-hint">Check this box to share your quiz in the Community Library.</p>
+						{/if}
+					</div>
+				{:else if !isArchived}
+					<div class="field share-field">
+						<p class="field-hint">
+							Publish this quiz to share it with other teachers in the Community Library.
+						</p>
+					</div>
+				{/if}
 			</section>
 
 			<section class="questions-section" aria-labelledby="questions-heading">
@@ -1227,6 +1299,19 @@
 		border: 1px solid var(--gruv-green);
 		background: #2b331b;
 		color: var(--gruv-green);
+	}
+
+	.status-shared {
+		border: 1px solid var(--gruv-blue);
+		background: #1c2e3d;
+		color: var(--gruv-blue);
+		gap: 0.35rem;
+	}
+
+	.share-field {
+		margin-top: var(--space-2);
+		padding-top: var(--space-3);
+		border-top: 1px dashed var(--color-border);
 	}
 
 	.status-archived {

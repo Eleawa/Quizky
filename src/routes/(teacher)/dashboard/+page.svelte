@@ -272,7 +272,7 @@
 					</div>
 				</div>
 
-				<div>
+				<div class="create-actions-row">
 					<button class="button button-primary" type="submit" disabled={creating}>
 						{#if creating}
 							<span class="gruv-spinner" aria-hidden="true"></span>
@@ -281,6 +281,9 @@
 						{/if}
 						{creating ? 'Creating…' : 'Create draft & add questions'}
 					</button>
+					<a class="button button-secondary" href={resolve('/(teacher)/library')}>
+						<EnergyIcon name="search" /> Browse Shared Library
+					</a>
 				</div>
 			</form>
 		</section>
@@ -313,6 +316,11 @@
 										<span class="status-badge status-{quiz.status}">
 											Status: {statusLabel(quiz.status)}
 										</span>
+										{#if quiz.isPublic}
+											<span class="status-badge status-shared"
+												><EnergyIcon name="check" /> Shared</span
+											>
+										{/if}
 										<span class="meta-pill">{formatQuestionCount(quiz.questionCount)}</span>
 									</div>
 									<h3>{quiz.title}</h3>
@@ -618,6 +626,20 @@
 		border: 1px solid var(--gruv-green);
 		background: #2b331b;
 		color: var(--gruv-green);
+	}
+
+	.status-shared {
+		border: 1px solid var(--gruv-blue);
+		background: #1c2e3d;
+		color: var(--gruv-blue);
+		gap: 0.35rem;
+	}
+
+	.create-actions-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-3);
 	}
 
 	.status-archived {

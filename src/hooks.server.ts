@@ -20,5 +20,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	return resolve(event);
+	const response = await resolve(event);
+	if (response.headers.get('content-type')?.includes('text/html')) {
+		response.headers.set('cache-control', 'no-cache, no-store, must-revalidate, max-age=0');
+		response.headers.set('pragma', 'no-cache');
+	}
+	return response;
 };

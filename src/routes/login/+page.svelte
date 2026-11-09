@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import EnergyIcon from '#lib/components/EnergyIcon.svelte';
 	import SiteHeader from '#lib/components/SiteHeader.svelte';
 	import { readApiError } from '#lib/shared/api-error.js';
 	import { BRAND } from '#lib/shared/brand.js';
@@ -10,6 +11,7 @@
 
 	let email = $state('');
 	let password = $state('');
+	let showPassword = $state(false);
 	let pending = $state(false);
 	let formError = $state('');
 	let fieldErrors = $state<Record<string, string>>({});
@@ -85,16 +87,28 @@
 
 				<div class="field">
 					<label for="password">Password</label>
-					<input
-						id="password"
-						name="password"
-						type="password"
-						autocomplete="current-password"
-						required
-						bind:value={password}
-						aria-invalid={Boolean(fieldErrors.password)}
-						aria-describedby={fieldErrors.password ? 'password-error' : undefined}
-					/>
+					<div class="password-input-wrapper">
+						<input
+							id="password"
+							name="password"
+							type={showPassword ? 'text' : 'password'}
+							autocomplete="current-password"
+							required
+							bind:value={password}
+							aria-invalid={Boolean(fieldErrors.password)}
+							aria-describedby={fieldErrors.password ? 'password-error' : undefined}
+						/>
+						<button
+							type="button"
+							class="password-toggle-btn"
+							onclick={() => (showPassword = !showPassword)}
+							disabled={pending}
+							aria-label={showPassword ? 'Hide password' : 'Show password'}
+							title={showPassword ? 'Hide password' : 'Show password'}
+						>
+							<EnergyIcon name={showPassword ? 'eye-off' : 'eye'} />
+						</button>
+					</div>
 					{#if fieldErrors.password}
 						<p class="field-error" id="password-error">{fieldErrors.password}</p>
 					{/if}

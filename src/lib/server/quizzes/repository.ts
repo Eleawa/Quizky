@@ -1,10 +1,11 @@
-import { and, asc, count, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, like, or } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
 import type { Database } from '../db/client.js';
 import {
 	questionOptions,
 	questions,
 	quizzes,
+	teachers,
 	type NewQuestionOptionRow,
 	type NewQuestionRow,
 	type NewQuizRow,
@@ -14,6 +15,8 @@ import {
 	type QuizStatus
 } from '../db/schema.js';
 import type {
+	LibraryQuizDetail,
+	LibraryQuizSummary,
 	QuizDetail,
 	QuizOptionDetail,
 	QuizQuestionDetail,
@@ -61,6 +64,7 @@ export async function listQuizzesByTeacher(
 			title: quizzes.title,
 			description: quizzes.description,
 			status: quizzes.status,
+			isPublic: quizzes.isPublic,
 			createdAt: quizzes.createdAt,
 			updatedAt: quizzes.updatedAt,
 			questionCount: count(questions.id)
@@ -77,6 +81,7 @@ export async function listQuizzesByTeacher(
 		title: row.title,
 		description: row.description,
 		status: row.status,
+		isPublic: Boolean(row.isPublic),
 		questionCount: Number(row.questionCount),
 		createdAt: row.createdAt,
 		updatedAt: row.updatedAt
@@ -137,6 +142,7 @@ export async function findQuizDetailForTeacher(
 		title: quiz.title,
 		description: quiz.description,
 		status: quiz.status,
+		isPublic: Boolean(quiz.isPublic),
 		createdAt: quiz.createdAt,
 		updatedAt: quiz.updatedAt,
 		questions: questionRows.map((question) =>
@@ -172,19 +178,31 @@ export async function replaceQuizAndQuestions(
 		teacherId: string;
 		title: string;
 		description: string | null;
+		isPublic?: boolean;
 		updatedAt: Date;
 		existingQuestionIds: string[];
 		questionWrites: QuizQuestionWrite[];
 	}
 ): Promise<void> {
+	const setFields: {
+		title: string;
+		description: string | null;
+		updatedAt: Date;
+		isPublic?: boolean;
+	} = {
+		title: params.title,
+		description: params.description,
+		updatedAt: params.updatedAt
+	};
+
+	if (params.isPublic !== undefined) {
+		setFields.isPublic = params.isPublic;
+	}
+
 	const statements: BatchItem<'sqlite'>[] = [
 		db
 			.update(quizzes)
-			.set({
-				title: params.title,
-				description: params.description,
-				updatedAt: params.updatedAt
-			})
+			.set(setFields)
 			.where(and(eq(quizzes.id, params.quizId), eq(quizzes.teacherId, params.teacherId)))
 	];
 
@@ -220,13 +238,148 @@ export async function updateQuizStatusForTeacher(
 		updatedAt: Date;
 	}
 ): Promise<void> {
+	const setFields: { status: QuizStatus; updatedAt: Date; isPublic?: boolean } = {
+		status: params.status,
+		updatedAt: params.updatedAt
+	};
+	if (params.status === 'archived') {
+		setFields.isPublic = false;
+	}
+
+	await db
+		.update(quizzes)
+		.set(setFields)
+		.where(and(eq(quizzes.id, params.quizId), eq(quizzes.teacherId, params.teacherId)));
+}
+
+export async function updateQuizShareForTeacher(
+	db: Database,
+	params: {
+		quizId: string;
+		teacherId: string;
+		isPublic: boolean;
+		updatedAt: Date;
+	}
+): Promise<void> {
 	await db
 		.update(quizzes)
 		.set({
-			status: params.status,
+			isPublic: params.isPublic,
 			updatedAt: params.updatedAt
 		})
 		.where(and(eq(quizzes.id, params.quizId), eq(quizzes.teacherId, params.teacherId)));
+}
+
+export async function listPublicQuizzes(
+	db: Database,
+	search?: string
+): Promise<LibraryQuizSummary[]> {
+	const trimmedSearch = search?.trim();
+	const baseCondition = and(eq(quizzes.isPublic, true), eq(quizzes.status, 'published'));
+	const whereClause = trimmedSearch
+		? and(
+				baseCondition,
+				or(
+					like(quizzes.title, `%${trimmedSearch}%`),
+					like(quizzes.description, `%${trimmedSearch}%`),
+					like(teachers.displayName, `%${trimmedSearch}%`)
+				)
+			)
+		: baseCondition;
+
+	const rows = await db
+		.select({
+			id: quizzes.id,
+			teacherId: quizzes.teacherId,
+			title: quizzes.title,
+			description: quizzes.description,
+			createdAt: quizzes.createdAt,
+			updatedAt: quizzes.updatedAt,
+			authorName: teachers.displayName,
+			questionCount: count(questions.id)
+		})
+		.from(quizzes)
+		.innerJoin(teachers, eq(teachers.id, quizzes.teacherId))
+		.leftJoin(questions, eq(questions.quizId, quizzes.id))
+		.where(whereClause)
+		.groupBy(quizzes.id)
+		.orderBy(desc(quizzes.updatedAt), desc(quizzes.createdAt));
+
+	return rows.map((row) => ({
+		id: row.id,
+		teacherId: row.teacherId,
+		title: row.title,
+		description: row.description,
+		questionCount: Number(row.questionCount),
+		authorName: row.authorName,
+		createdAt: row.createdAt,
+		updatedAt: row.updatedAt
+	}));
+}
+
+export async function findPublicQuizDetail(
+	db: Database,
+	quizId: string
+): Promise<LibraryQuizDetail | null> {
+	const [quizRow] = await db
+		.select({
+			id: quizzes.id,
+			teacherId: quizzes.teacherId,
+			title: quizzes.title,
+			description: quizzes.description,
+			status: quizzes.status,
+			isPublic: quizzes.isPublic,
+			createdAt: quizzes.createdAt,
+			updatedAt: quizzes.updatedAt,
+			authorName: teachers.displayName
+		})
+		.from(quizzes)
+		.innerJoin(teachers, eq(teachers.id, quizzes.teacherId))
+		.where(and(eq(quizzes.id, quizId), eq(quizzes.isPublic, true), eq(quizzes.status, 'published')))
+		.limit(1);
+
+	if (!quizRow) return null;
+
+	const questionRows = await db
+		.select()
+		.from(questions)
+		.where(eq(questions.quizId, quizRow.id))
+		.orderBy(asc(questions.position));
+
+	const questionIds = questionRows.map((row) => row.id);
+	const optionRows =
+		questionIds.length > 0
+			? await db
+					.select()
+					.from(questionOptions)
+					.where(inArray(questionOptions.questionId, questionIds))
+					.orderBy(asc(questionOptions.position))
+			: [];
+
+	const optionsByQuestion = new Map<string, QuestionOptionRow[]>();
+	for (const option of optionRows) {
+		const bucket = optionsByQuestion.get(option.questionId);
+		if (bucket) {
+			bucket.push(option);
+		} else {
+			optionsByQuestion.set(option.questionId, [option]);
+		}
+	}
+
+	return {
+		id: quizRow.id,
+		teacherId: quizRow.teacherId,
+		title: quizRow.title,
+		description: quizRow.description,
+		status: quizRow.status,
+		isPublic: Boolean(quizRow.isPublic),
+		createdAt: quizRow.createdAt,
+		updatedAt: quizRow.updatedAt,
+		authorName: quizRow.authorName,
+		questions: questionRows.map((question) =>
+			toQuestionDetail(question, optionsByQuestion.get(question.id) ?? [])
+		)
+	};
 }
 
 export async function deleteQuizForTeacher(

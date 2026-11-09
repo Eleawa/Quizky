@@ -60,6 +60,7 @@ export interface QuizSummary {
 	title: string;
 	description: string | null;
 	status: QuizStatus;
+	isPublic: boolean;
 	questionCount: number;
 	createdAt: Date | string;
 	updatedAt: Date | string;
@@ -71,7 +72,23 @@ export interface QuizDetail {
 	title: string;
 	description: string | null;
 	status: QuizStatus;
+	isPublic: boolean;
 	createdAt: Date | string;
 	updatedAt: Date | string;
 	questions: QuizQuestionDetail[];
+}
+
+export interface LibraryQuizSummary {
+	id: string;
+	teacherId: string;
+	title: string;
+	description: string | null;
+	questionCount: number;
+	authorName: string;
+	createdAt: Date | string;
+	updatedAt: Date | string;
+}
+
+export interface LibraryQuizDetail extends QuizDetail {
+	authorName: string;
 }

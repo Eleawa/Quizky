@@ -105,6 +105,7 @@ export const createQuizSchema = z
 	.object({
 		title: quizTitleSchema,
 		description: quizDescriptionSchema,
+		isPublic: z.boolean().optional().default(false),
 		questions: z
 			.array(quizQuestionInputSchema)
 			.max(QUIZ_LIMITS.maxQuestions, `Include at most ${QUIZ_LIMITS.maxQuestions} questions.`)
@@ -117,9 +118,16 @@ export const updateQuizSchema = z
 	.object({
 		title: quizTitleSchema,
 		description: quizDescriptionSchema,
+		isPublic: z.boolean().optional(),
 		questions: z
 			.array(quizQuestionInputSchema)
 			.max(QUIZ_LIMITS.maxQuestions, `Include at most ${QUIZ_LIMITS.maxQuestions} questions.`)
+	})
+	.strict();
+
+export const shareQuizSchema = z
+	.object({
+		isPublic: z.boolean()
 	})
 	.strict();
 

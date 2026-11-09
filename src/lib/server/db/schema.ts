@@ -52,12 +52,14 @@ export const quizzes = sqliteTable(
 		title: text('title').notNull(),
 		description: text('description'),
 		status: text('status', { enum: quizStatusValues }).notNull().default('draft'),
+		isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(false),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull()
 	},
 	(table) => [
 		index('quizzes_teacher_id_idx').on(table.teacherId),
-		index('quizzes_teacher_status_idx').on(table.teacherId, table.status)
+		index('quizzes_teacher_status_idx').on(table.teacherId, table.status),
+		index('quizzes_is_public_status_idx').on(table.isPublic, table.status)
 	]
 );
 
